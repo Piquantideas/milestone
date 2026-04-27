@@ -77,8 +77,19 @@
       font-weight: 300;
       line-height: 1.8;
     }
-    /* Final payoff — larger, slower */
+    /* ── t2 and t6 were .sub but need readable size on mobile ── */
+    #t2, #t6 {
+      font-size: clamp(13px, 5.2cqi, 19px);
+      letter-spacing: 0.08em;
+    }
+    /* t7 "They come from brands bold enough…" — sub style, extra line-height for 4 lines */
     #t7 {
+      font-size: clamp(13px, 5.2cqi, 19px);
+      letter-spacing: 0.08em;
+      line-height: 1.85;
+    }
+    /* Final payoff — larger, slower */
+    #t8 {
       font-size: clamp(15px, 6cqi, 22px);
       letter-spacing: 0.05em;
       font-weight: 400;
@@ -86,7 +97,7 @@
       color: #f0ece4;
       transition: opacity 1.5s ease, visibility 0s linear 0s;
     }
-    #t7.visible {
+    #t8.visible {
       transition: opacity 1.5s ease, visibility 0s linear 0s;
     }
 
@@ -131,13 +142,15 @@
     <!-- S3 -->
     <div class="txt"     id="t3">It has to evolve.</div>
     <!-- S4 -->
-    <div class="txt"     id="t4">The right partnerships don't<br>just extend your reach —<br>they unlock growth<br>you couldn't see alone.</div>
+    <div class="txt"     id="t4">The right partnerships don't<br>just extend your reach —</div>
     <!-- S5 -->
-    <div class="txt"     id="t5">The most powerful ideas<br>don't come from inside the box.</div>
+    <div class="txt"     id="t5">they unlock growth<br>you couldn't see alone.</div>
     <!-- S6 -->
-    <div class="txt sub" id="t6">Built for the landscape<br>we're actually in.</div>
+    <div class="txt"     id="t6">The most powerful ideas<br>don't come from inside the box.</div>
     <!-- S7 -->
-    <div class="txt"     id="t7">This is where growth begins.</div>
+    <div class="txt sub" id="t7">They come from brands bold enough<br>to think beyond it —<br>built for the landscape<br>we're actually in.</div>
+    <!-- S8 -->
+    <div class="txt"     id="t8">This is where growth begins.</div>
   </div>
 
   <div id="timer-bar"><div id="timer-fill"></div></div>
@@ -160,22 +173,23 @@
   const playBtn   = document.getElementById('play-btn');
 
   const txts = {};
-  ['t1','t2','t3','t4','t5','t6','t7'].forEach(id => { txts[id] = document.getElementById(id); });
+  ['t1','t2','t3','t4','t5','t6','t7','t8'].forEach(id => { txts[id] = document.getElementById(id); });
 
   /* ── Timing ──
-   *  27 000ms raw / 1.5 = 18 000ms real
+   *  36 450ms raw / 1.35 = 27 000ms real  (27s clip)
    *
-   *  Scene  raw ms        real ms       copy
-   *  S1     0 – 3500      0 – 2333      "Brand experience isn't a campaign"
-   *  S2     3500 – 6500   2333 – 4333   "Every touchpoint, every moment…"
-   *  S3     6500 – 9000   4333 – 6000   "It has to evolve."
-   *  S4     9000 – 14500  6000 – 9667   "Right partnerships…unlock growth"
-   *  S5     14500 – 18500 9667 – 12333  "Most powerful ideas…not from the box"
-   *  S6     18500 – 22500 12333 – 15000 "Built for the landscape…"
-   *  S7     22500 – 27000 15000 – 18000 "This is where growth begins."
+   *  Scene  raw ms          real ms         copy
+   *  S1     0 – 4050        0 – 3000        "Brand experience isn't a campaign anymore."
+   *  S2     4050 – 8775     3000 – 6500     "Every touchpoint, every moment, every feeling."
+   *  S3     8775 – 12150    6500 – 9000     "It has to evolve."
+   *  S4     12150 – 16875   9000 – 12500    "The right partnerships…just extend your reach —"
+   *  S5     16875 – 20925   12500 – 15500   "they unlock growth you couldn't see alone."
+   *  S6     20925 – 25650   15500 – 19000   "Most powerful ideas…not from inside the box."
+   *  S7     25650 – 31050   19000 – 23000   "They come from brands bold enough…landscape."
+   *  S8     31050 – 36450   23000 – 27000   "This is where growth begins."
    */
-  const SPEED    = 1.5;
-  const DURATION = Math.round(27000 / SPEED); // 18 000ms
+  const SPEED    = 1.35;
+  const DURATION = Math.round(36450 / SPEED); // 27 000ms
   const T        = ms => Math.round(ms / SPEED);
 
   /* ── Global state ── */
@@ -483,11 +497,11 @@
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     * S1  0–2333ms  "Brand experience isn't a campaign anymore."
+     * S1  0–3000ms  "Brand experience isn't a campaign anymore."
      * Single hexagon rotates slowly at centre. Brand node pulses in.
      * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-    if (elapsed < T(3500)) {
-      const p   = elapsed / T(3500);
+    if (elapsed < T(4050)) {
+      const p   = elapsed / T(4050);
       const hex = easeOut(clamp(p * 1.5, 0, 1));
       showOnly('t1');
 
@@ -504,12 +518,12 @@
       drawNode(nodes[0].x, nodes[0].y, nodes[0].r, nodes[0].alpha, true);
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     * S2  2333–4333ms  "Every touchpoint, every moment, every feeling."
+     * S2  3000–6500ms  "Every touchpoint, every moment, every feeling."
      * Touchpoint nodes bloom out from centre one by one.
      * Connections draw between them.
      * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-    } else if (elapsed < T(6500)) {
-      const p = (elapsed - T(3500)) / T(3000);
+    } else if (elapsed < T(8775)) {
+      const p = (elapsed - T(4050)) / T(4725);
       showOnly('t2');
 
       drawGlow(W * 0.45, '160,155,200', 0.06);
@@ -531,12 +545,12 @@
       }
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     * S3  4333–6000ms  "It has to evolve."
+     * S3  6500–9000ms  "It has to evolve."
      * Expanding rings pulse outward from core.
      * Nodes shift position slightly.
      * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-    } else if (elapsed < T(9000)) {
-      const p = (elapsed - T(6500)) / T(2500);
+    } else if (elapsed < T(12150)) {
+      const p = (elapsed - T(8775)) / T(3375);
       showOnly('t3');
 
       drawGlow(W * 0.5, '170,160,210', lerp(0.06, 0.1, p));
@@ -556,12 +570,12 @@
       }
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     * S4  6000–9667ms  "Right partnerships…unlock growth you couldn't see alone."
-     * Outer nodes fly in from beyond the frame and connect.
-     * Network becomes expansive.
+     * S4  9000–12500ms  "The right partnerships don't just extend your reach —"
+     * Outer nodes begin flying in from beyond the frame.
+     * Network starts to expand outward.
      * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-    } else if (elapsed < T(14500)) {
-      const p = (elapsed - T(9000)) / T(5500);
+    } else if (elapsed < T(16875)) {
+      const p = (elapsed - T(12150)) / T(4725);
       showOnly('t4');
 
       drawGlow(W * 0.55, '155,165,215', lerp(0.1, 0.15, p));
@@ -602,15 +616,49 @@
       }
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     * S5  9667–12333ms  "Most powerful ideas don't come from inside the box."
+     * S5  12500–15500ms  "they unlock growth you couldn't see alone."
+     * All outer nodes fully arrived, network at maximum expansion.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(20925)) {
+      const p = (elapsed - T(16875)) / T(4050);
+      showOnly('t5');
+
+      drawGlow(W * 0.55, '155,165,215', lerp(0.15, 0.12, p));
+      drawRings(elapsed, lerp(0.3, 0.15, p));
+
+      /* All inner nodes steady */
+      nodes[0].alpha = 1;
+      drawNode(nodes[0].x, nodes[0].y, nodes[0].r, 1, true);
+      for (let i = 1; i <= 7; i++) {
+        const nd = nodes[i];
+        const drift = Math.sin(elapsed * 0.001 * (0.5 + rng(i*3) * 0.5) + nd.born * 10) * W * 0.015;
+        const nx = nd.ox + drift;
+        const ny = nd.oy + Math.cos(elapsed * 0.0008 + nd.born * 8) * H * 0.012;
+        drawConnection(nodes[0].x, nodes[0].y, nx, ny, 0.35);
+        drawNode(nx, ny, nd.r, 1, false);
+      }
+      /* All outer nodes fully arrived and holding */
+      for (let i = 8; i <= 17; i++) {
+        const nd      = nodes[i];
+        const px      = nd.tx; const py = nd.ty;
+        const nearIdx = 1 + Math.floor(rng(i*7) * 7);
+        const inner   = nodes[nearIdx];
+        const inDrift = Math.sin(elapsed * 0.001 * (0.5 + rng(nearIdx*3) * 0.5) + inner.born * 10) * W * 0.015;
+        drawConnection(inner.ox + inDrift, inner.oy, px, py, lerp(0.4, 0.3, p));
+        if (rng(i*11) > 0.5) drawConnection(nodes[0].x, nodes[0].y, px, py, lerp(0.2, 0.15, p));
+        drawNode(px, py, nd.r, 1, false);
+      }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S6  15500–19000ms  "Most powerful ideas don't come from inside the box."
      * A box appears at centre containing the network,
      * then shatters outward — fragments fly in all directions.
      * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-    } else if (elapsed < T(18500)) {
-      const p      = (elapsed - T(14500)) / T(4000);
-      const boxIn  = clamp(p * 3, 0, 1);       // box draws in 0→0.33 of p
-      const boxOut = clamp((p - 0.35) / 0.65, 0, 1); // shatters rest of p
-      showOnly('t5');
+    } else if (elapsed < T(25650)) {
+      const p      = (elapsed - T(20925)) / T(4725);
+      const boxIn  = clamp(p * 3, 0, 1);
+      const boxOut = clamp((p - 0.35) / 0.65, 0, 1);
+      showOnly('t6');
 
       /* Fading network residue */
       const netAlpha = lerp(1, 0, clamp(p * 2.5, 0, 1));
@@ -632,8 +680,7 @@
       /* Box shatters */
       if (boxOut > 0) {
         drawShards(boxOut, 1 - boxOut * 0.5);
-        /* Flash on shatter */
-        const flash = clamp((boxOut) * 3, 0, 1) * (1 - boxOut);
+        const flash = clamp(boxOut * 3, 0, 1) * (1 - boxOut);
         if (flash > 0.01) {
           ctx.fillStyle = `rgba(220,215,240,${flash * 0.08})`;
           ctx.fillRect(0, 0, W, H);
@@ -643,13 +690,13 @@
       drawGlow(W * 0.45, '160,150,210', lerp(0.12, 0.06, p));
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     * S6  12333–15000ms  "Built for the landscape we're actually in."
-     * Fragments settle. A flowing landscape horizon forms.
-     * Stars appear above it.
+     * S7  19000–23000ms  "They come from brands bold enough…built for the landscape."
+     * Shards settle into a flowing landscape horizon.
+     * Stars scatter above it.
      * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
-    } else if (elapsed < T(22500)) {
-      const p = (elapsed - T(18500)) / T(4000);
-      showOnly('t6');
+    } else if (elapsed < T(31050)) {
+      const p = (elapsed - T(25650)) / T(5400);
+      showOnly('t7');
 
       /* Residual shards fading */
       const shardAlpha = lerp(0.5, 0, clamp(p * 2.5, 0, 1));
@@ -661,14 +708,14 @@
       drawGlow(W * 0.5, '150,155,210', lerp(0.06, 0.1, p));
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     * S7  15000–18000ms  "This is where growth begins."
+     * S8  23000–27000ms  "This is where growth begins."
      * Landscape gently visible. Single bright star rises.
      * Slow pulsing corona. Clean. Hopeful.
      * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
     } else {
-      const p     = clamp((elapsed - T(22500)) / T(4500), 0, 1);
+      const p     = clamp((elapsed - T(31050)) / T(5400), 0, 1);
       const pulse = Math.sin(elapsed * 0.0015) * 0.5 + 0.5;
-      showOnly('t7');
+      showOnly('t8');
 
       /* Dim landscape backdrop */
       drawLandscape(elapsed, lerp(0.35, 0.22, p));
@@ -682,7 +729,7 @@
     if (elapsed < DURATION) {
       animId = requestAnimationFrame(animate);
     } else {
-      showOnly('t7');
+      showOnly('t8');
       timerFill.style.width = '100%';
       setTimeout(() => { playBtn.style.display = 'flex'; playing = false; }, 800);
     }
