@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>This Is Where Growth Begins</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      display: flex; align-items: center; justify-content: center;
+      overscroll-behavior: none;
+      overflow: hidden;
+      padding: env(safe-area-inset-top,0px)   env(safe-area-inset-right,0px)
+               env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
+    }
+
+    #stage {
+      --stage-w: min(420px, min(100vw, calc(100dvh * 9 / 16)));
+      width: var(--stage-w);
+      aspect-ratio: 9 / 16;
+      background: #000;
+      position: relative;
+      overflow: hidden;
+      font-family: 'Playfair Display', serif;
+      will-change: transform;
+      container-type: inline-size;
+    }
+    @supports not (height: 100dvh) {
+      #stage { --stage-w: min(420px, min(100vw, calc(100vh * 9 / 16))); }
+    }
+
+    canvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      image-rendering: crisp-edges;
+      display: block;
+    }
+
+    /* ── Text layer ── */
+    #text-layer {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; pointer-events: none;
+      flex-direction: column;
+    }
+
+    .txt {
+      color: #f0ece4;
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: clamp(13px, 5.2cqi, 19px);
+      letter-spacing: 0.06em;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.9s ease, visibility 0s linear 0.9s;
+      line-height: 1.65;
+      max-width: 80%;
+      font-style: italic;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      position: absolute;
+    }
+    .txt.visible {
+      opacity: 1; visibility: visible;
+      transition: opacity 0.9s ease, visibility 0s linear 0s;
+    }
+    .txt.sub {
+      font-size: clamp(9px, 3cqi, 12px);
+      letter-spacing: 0.22em;
+      color: rgba(240,236,228,0.48);
+      font-style: normal;
+      font-weight: 300;
+      line-height: 1.8;
+    }
+    /* Final payoff — larger, slower */
+    #t7 {
+      font-size: clamp(15px, 6cqi, 22px);
+      letter-spacing: 0.05em;
+      font-weight: 400;
+      font-style: italic;
+      color: #f0ece4;
+      transition: opacity 1.5s ease, visibility 0s linear 0s;
+    }
+    #t7.visible {
+      transition: opacity 1.5s ease, visibility 0s linear 0s;
+    }
+
+    /* ── Timer ── */
+    #timer-bar {
+      position: absolute; bottom: 18px; left: 50%;
+      transform: translateX(-50%);
+      width: 60%; height: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+    #timer-fill {
+      height: 100%; background: rgba(255,255,255,0.25); width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    /* ── Play button ── */
+    #play-btn {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; background: rgba(0,0,0,0.6); z-index: 10;
+      flex-direction: column; gap: 12px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #play-btn svg { opacity: 0.7; }
+    #play-label {
+      color: rgba(255,255,255,0.4);
+      font-size: 10px; letter-spacing: 0.25em;
+      font-family: 'Playfair Display', serif; font-style: italic;
+    }
+  </style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+
+  <div id="text-layer">
+    <!-- S1 -->
+    <div class="txt"     id="t1">Brand experience isn't<br>a campaign anymore.</div>
+    <!-- S2 -->
+    <div class="txt sub" id="t2">It's every touchpoint,<br>every moment, every feeling.</div>
+    <!-- S3 -->
+    <div class="txt"     id="t3">It has to evolve.</div>
+    <!-- S4 -->
+    <div class="txt"     id="t4">The right partnerships don't<br>just extend your reach —<br>they unlock growth<br>you couldn't see alone.</div>
+    <!-- S5 -->
+    <div class="txt"     id="t5">The most powerful ideas<br>don't come from inside the box.</div>
+    <!-- S6 -->
+    <div class="txt sub" id="t6">Built for the landscape<br>we're actually in.</div>
+    <!-- S7 -->
+    <div class="txt"     id="t7">This is where growth begins.</div>
+  </div>
+
+  <div id="timer-bar"><div id="timer-fill"></div></div>
+
+  <div id="play-btn">
+    <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+      <circle cx="22" cy="22" r="21" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+      <polygon points="17,14 34,22 17,30" fill="rgba(255,255,255,0.7)"/>
+    </svg>
+    <div id="play-label">Play</div>
+  </div>
+</div>
+
+<script>
+  /* ── Elements ── */
+  const canvas    = document.getElementById('c');
+  const ctx       = canvas.getContext('2d');
+  const stage     = document.getElementById('stage');
+  const timerFill = document.getElementById('timer-fill');
+  const playBtn   = document.getElementById('play-btn');
+
+  const txts = {};
+  ['t1','t2','t3','t4','t5','t6','t7'].forEach(id => { txts[id] = document.getElementById(id); });
+
+  /* ── Timing ──
+   *  27 000ms raw / 1.5 = 18 000ms real
+   *
+   *  Scene  raw ms        real ms       copy
+   *  S1     0 – 3500      0 – 2333      "Brand experience isn't a campaign"
+   *  S2     3500 – 6500   2333 – 4333   "Every touchpoint, every moment…"
+   *  S3     6500 – 9000   4333 – 6000   "It has to evolve."
+   *  S4     9000 – 14500  6000 – 9667   "Right partnerships…unlock growth"
+   *  S5     14500 – 18500 9667 – 12333  "Most powerful ideas…not from the box"
+   *  S6     18500 – 22500 12333 – 15000 "Built for the landscape…"
+   *  S7     22500 – 27000 15000 – 18000 "This is where growth begins."
+   */
+  const SPEED    = 1.5;
+  const DURATION = Math.round(27000 / SPEED); // 18 000ms
+  const T        = ms => Math.round(ms / SPEED);
+
+  /* ── Global state ── */
+  let W, H, cx, cy;
+  let animId, startTime, playing = false;
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  /* ── Network nodes (S1–S4) ── */
+  let nodes       = [];   // { x, y, ox, oy, r, alpha, connections[], born }
+  let shards      = [];   // box shards for S5
+  let landscapePts= [];   // horizon points for S6
+  let growthStar  = null; // final bright point for S7
+
+  /* ── Resize ── */
+  let resizeTimer;
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cx = W / 2; cy = H / 2;
+  }
+  new ResizeObserver(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resize, 60);
+  }).observe(stage);
+  resize();
+
+  /* ── Helpers ── */
+  function easeInOut(t) { return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
+  function easeOut(t)   { return 1 - Math.pow(1-t, 2); }
+  function lerp(a,b,t)  { return a + (b-a)*t; }
+  function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  /* ── Deterministic RNG (no flicker across frames) ── */
+  function rng(seed) {
+    const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  /* ════════════════════════════════════════
+   *  INIT — called on every replay
+   * ════════════════════════════════════════ */
+  function initScene() {
+    /* Core node: brand at centre */
+    nodes = [{ x: cx, y: cy, ox: cx, oy: cy, r: 3.5, alpha: 0, born: 0, core: true }];
+
+    /* 7 primary touchpoint nodes in a loose orbit */
+    const angles  = [0, 51, 103, 154, 206, 257, 308].map(d => d * Math.PI / 180);
+    const orbitR  = Math.min(W, H) * 0.22;
+    angles.forEach((a, i) => {
+      const nx = cx + Math.cos(a) * orbitR * (0.85 + rng(i*3) * 0.3);
+      const ny = cy + Math.sin(a) * orbitR * (0.85 + rng(i*5) * 0.3);
+      nodes.push({ x: nx, y: ny, ox: nx, oy: ny, r: 2, alpha: 0, born: i * 0.12, core: false });
+    });
+
+    /* 10 outer "partnership" nodes that arrive from outside frame in S4 */
+    for (let i = 0; i < 10; i++) {
+      const angle = rng(i * 17) * Math.PI * 2;
+      const dist  = Math.min(W, H) * (0.38 + rng(i * 5) * 0.18);
+      const nx = cx + Math.cos(angle) * dist;
+      const ny = cy + Math.sin(angle) * dist;
+      /* start far off-screen */
+      const startX = cx + Math.cos(angle) * Math.max(W, H);
+      const startY = cy + Math.sin(angle) * Math.max(W, H);
+      nodes.push({
+        x: startX, y: startY,
+        ox: nx, oy: ny,
+        tx: nx, ty: ny,
+        r: 1.5, alpha: 0, born: i * 0.08,
+        outer: true, arrivalAngle: angle,
+      });
+    }
+
+    /* Box shards for S5 */
+    const bW = W * 0.5, bH = H * 0.18;
+    shards = [];
+    const shardCount = 18;
+    for (let i = 0; i < shardCount; i++) {
+      const sx = cx - bW/2 + rng(i*3) * bW;
+      const sy = cy - bH/2 + rng(i*7) * bH;
+      shards.push({
+        x: sx, y: sy, ox: sx, oy: sy,
+        vx: (rng(i*11) - 0.5) * W * 0.9,
+        vy: (rng(i*13) - 0.5) * H * 0.5,
+        rot: rng(i*17) * Math.PI * 2,
+        rotV: (rng(i*19) - 0.5) * 8,
+        w: 4 + rng(i*23) * 8,
+        h: 1.5 + rng(i*29) * 3,
+        alpha: 0.7 + rng(i*31) * 0.3,
+      });
+    }
+
+    /* Landscape horizon points for S6 */
+    landscapePts = [];
+    const lCount = 40;
+    for (let i = 0; i <= lCount; i++) {
+      landscapePts.push({
+        x: (i / lCount) * W,
+        baseY: cy + H * (0.05 + rng(i*7) * 0.12),
+        phase: rng(i*11) * Math.PI * 2,
+        amp: H * (0.008 + rng(i*13) * 0.025),
+        speed: 0.3 + rng(i*17) * 0.5,
+      });
+    }
+
+    /* Final growth star */
+    growthStar = { x: cx, y: cy - H * 0.04, alpha: 0 };
+  }
+
+  /* ════════════════════════════════════════
+   *  DRAW HELPERS
+   * ════════════════════════════════════════ */
+
+  /* ── Ambient glow ── */
+  function drawGlow(r, color, alpha) {
+    if (alpha < 0.005) return;
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+    g.addColorStop(0,   `rgba(${color},${alpha})`);
+    g.addColorStop(0.5, `rgba(${color},${alpha * 0.35})`);
+    g.addColorStop(1,   `rgba(${color},0)`);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI*2);
+    ctx.fillStyle = g; ctx.fill();
+  }
+
+  /* ── Node dot with halo ── */
+  function drawNode(x, y, r, alpha, warm) {
+    if (alpha < 0.005) return;
+    const col = warm ? '240,228,200' : '200,215,240';
+    const haloR = r * 5;
+    const gh = ctx.createRadialGradient(x, y, 0, x, y, haloR);
+    gh.addColorStop(0, `rgba(${col},${alpha * 0.6})`);
+    gh.addColorStop(1, `rgba(${col},0)`);
+    ctx.beginPath(); ctx.arc(x, y, haloR, 0, Math.PI*2);
+    ctx.fillStyle = gh; ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(${col},${alpha})`; ctx.fill();
+  }
+
+  /* ── Connection line between two nodes ── */
+  function drawConnection(x1, y1, x2, y2, alpha) {
+    if (alpha < 0.005) return;
+    const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+    grad.addColorStop(0, `rgba(210,205,230,${alpha * 0.6})`);
+    grad.addColorStop(0.5, `rgba(210,205,230,${alpha * 0.9})`);
+    grad.addColorStop(1, `rgba(210,205,230,${alpha * 0.6})`);
+    ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2);
+    ctx.strokeStyle = grad; ctx.lineWidth = 0.4; ctx.stroke();
+  }
+
+  /* ── Rotating hexagon outline ── */
+  function drawHex(x, y, r, rotation, alpha) {
+    if (alpha < 0.005) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++) {
+      const a  = rotation + (i / 6) * Math.PI * 2;
+      const px = x + Math.cos(a) * r;
+      const py = y + Math.sin(a) * r;
+      i === 0 ? ctx.moveTo(px,py) : ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(210,205,225,${alpha})`;
+    ctx.lineWidth = 0.7;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ── Box outline (S5) ── */
+  function drawBox(alpha) {
+    if (alpha < 0.005) return;
+    const bW = W * 0.5, bH = H * 0.18;
+    ctx.beginPath();
+    ctx.rect(cx - bW/2, cy - bH/2, bW, bH);
+    ctx.strokeStyle = `rgba(200,195,220,${alpha})`;
+    ctx.lineWidth = 0.6; ctx.stroke();
+  }
+
+  /* ── Exploding shards (S5) ── */
+  function drawShards(progress, alpha) {
+    if (alpha < 0.005) return;
+    const ease = easeOut(progress);
+    shards.forEach((s, i) => {
+      const px  = s.ox + s.vx * ease;
+      const py  = s.oy + s.vy * ease;
+      const rot = s.rot + s.rotV * ease;
+      const a   = s.alpha * alpha * (1 - ease * 0.85);
+      if (a < 0.005) return;
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(rot);
+      ctx.fillStyle = `rgba(210,205,225,${a})`;
+      ctx.fillRect(-s.w/2, -s.h/2, s.w, s.h);
+      ctx.restore();
+    });
+  }
+
+  /* ── Expanding rings (S3 – evolution) ── */
+  function drawRings(elapsed, alpha) {
+    if (alpha < 0.005) return;
+    for (let i = 0; i < 3; i++) {
+      const phase    = ((elapsed * 0.00045) + i / 3) % 1;
+      const ringR    = phase * Math.min(W, H) * 0.42;
+      const ringAlpha = alpha * (1 - phase) * 0.45;
+      ctx.beginPath(); ctx.arc(cx, cy, ringR, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(190,185,215,${ringAlpha})`;
+      ctx.lineWidth = 0.6; ctx.stroke();
+    }
+  }
+
+  /* ── Landscape horizon (S6) ── */
+  function drawLandscape(elapsed, alpha) {
+    if (alpha < 0.005) return;
+    /* Upper horizon line */
+    ctx.beginPath();
+    landscapePts.forEach((p, i) => {
+      const y = p.baseY + Math.sin(elapsed * 0.001 * p.speed + p.phase) * p.amp;
+      i === 0 ? ctx.moveTo(p.x, y) : ctx.lineTo(p.x, y);
+    });
+    ctx.strokeStyle = `rgba(200,195,220,${alpha * 0.6})`;
+    ctx.lineWidth = 0.8; ctx.stroke();
+
+    /* Lower fill gradient */
+    const lastPt = landscapePts[landscapePts.length - 1];
+    const lastY  = lastPt.baseY;
+    const grad   = ctx.createLinearGradient(0, lastY, 0, lastY + H * 0.15);
+    grad.addColorStop(0, `rgba(180,175,210,${alpha * 0.08})`);
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.beginPath();
+    landscapePts.forEach((p, i) => {
+      const y = p.baseY + Math.sin(elapsed * 0.001 * p.speed + p.phase) * p.amp;
+      i === 0 ? ctx.moveTo(p.x, y) : ctx.lineTo(p.x, y);
+    });
+    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+    ctx.fillStyle = grad; ctx.fill();
+
+    /* Scatter stars above landscape */
+    for (let i = 0; i < 24; i++) {
+      const sx = rng(i * 7) * W;
+      const sy = rng(i * 11) * (lastY - H * 0.15) + H * 0.08;
+      const sa = (Math.sin(elapsed * 0.001 * (0.4 + rng(i*3) * 0.6) + i) * 0.4 + 0.6) * alpha * 0.5;
+      ctx.beginPath(); ctx.arc(sx, sy, 0.8, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(220,218,235,${sa})`; ctx.fill();
+    }
+  }
+
+  /* ── Growth star (S7) ── */
+  function drawGrowthStar(alpha, pulse) {
+    if (alpha < 0.005) return;
+    const x = growthStar.x, y = growthStar.y;
+    const r = 3 + pulse * 1.5;
+
+    /* Large outer corona */
+    const g1 = ctx.createRadialGradient(x, y, 0, x, y, W * 0.45);
+    g1.addColorStop(0,   `rgba(215,210,240,${alpha * 0.12})`);
+    g1.addColorStop(0.4, `rgba(190,185,220,${alpha * 0.05})`);
+    g1.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.arc(x, y, W*0.45, 0, Math.PI*2);
+    ctx.fillStyle = g1; ctx.fill();
+
+    /* Medium halo */
+    const g2 = ctx.createRadialGradient(x, y, 0, x, y, W * 0.1);
+    g2.addColorStop(0, `rgba(240,235,215,${alpha * 0.9})`);
+    g2.addColorStop(1, 'rgba(240,235,215,0)');
+    ctx.beginPath(); ctx.arc(x, y, W*0.1, 0, Math.PI*2);
+    ctx.fillStyle = g2; ctx.fill();
+
+    /* Core dot */
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2);
+    ctx.fillStyle = `rgba(255,252,235,${alpha})`; ctx.fill();
+
+    /* 4 fine rays */
+    const rayLen = W * 0.12 * alpha;
+    [[0,1],[1,0],[0,-1],[-1,0]].forEach(([dx, dy]) => {
+      const grad = ctx.createLinearGradient(x, y, x + dx*rayLen, y + dy*rayLen);
+      grad.addColorStop(0,   `rgba(255,252,235,${alpha * 0.7})`);
+      grad.addColorStop(1,   'rgba(255,252,235,0)');
+      ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x+dx*rayLen, y+dy*rayLen);
+      ctx.strokeStyle = grad; ctx.lineWidth = 0.8; ctx.stroke();
+    });
+  }
+
+  /* ════════════════════════════════════════
+   *  TEXT HELPERS
+   * ════════════════════════════════════════ */
+  function hideAll() {
+    Object.values(txts).forEach(el => el.classList.remove('visible'));
+  }
+  function showOnly(id) {
+    hideAll();
+    if (id) txts[id].classList.add('visible');
+  }
+
+  /* ════════════════════════════════════════
+   *  MAIN LOOP
+   * ════════════════════════════════════════ */
+  function animate(ts) {
+    if (!startTime) startTime = ts;
+    const elapsed = ts - startTime;
+    timerFill.style.width = (Math.min(1, elapsed / DURATION) * 100) + '%';
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S1  0–2333ms  "Brand experience isn't a campaign anymore."
+     * Single hexagon rotates slowly at centre. Brand node pulses in.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    if (elapsed < T(3500)) {
+      const p   = elapsed / T(3500);
+      const hex = easeOut(clamp(p * 1.5, 0, 1));
+      showOnly('t1');
+
+      drawGlow(W * 0.4, '160,155,200', p * 0.05);
+
+      /* Hex, grows in and rotates */
+      const hexR   = Math.min(W,H) * 0.2 * hex;
+      const hexRot = elapsed * 0.0003;
+      drawHex(cx, cy, hexR, hexRot, hex * 0.5);
+      drawHex(cx, cy, hexR * 0.6, -hexRot * 1.4, hex * 0.25);
+
+      /* Core node fades in */
+      nodes[0].alpha = clamp(p * 2, 0, 1);
+      drawNode(nodes[0].x, nodes[0].y, nodes[0].r, nodes[0].alpha, true);
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S2  2333–4333ms  "Every touchpoint, every moment, every feeling."
+     * Touchpoint nodes bloom out from centre one by one.
+     * Connections draw between them.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(6500)) {
+      const p = (elapsed - T(3500)) / T(3000);
+      showOnly('t2');
+
+      drawGlow(W * 0.45, '160,155,200', 0.06);
+      drawHex(cx, cy, Math.min(W,H)*0.2, elapsed*0.0003, lerp(0.5, 0.12, p));
+
+      /* Core node */
+      nodes[0].alpha = 1;
+      drawNode(nodes[0].x, nodes[0].y, nodes[0].r, 1, true);
+
+      /* Bloom touchpoint nodes */
+      for (let i = 1; i <= 7; i++) {
+        const nd     = nodes[i];
+        const unlock = (i-1) / 7;
+        if (p < unlock) continue;
+        nd.alpha = clamp((p - unlock) / 0.12, 0, 1);
+        /* Connection to core */
+        drawConnection(nodes[0].x, nodes[0].y, nd.x, nd.y, nd.alpha * 0.55);
+        drawNode(nd.x, nd.y, nd.r, nd.alpha, false);
+      }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S3  4333–6000ms  "It has to evolve."
+     * Expanding rings pulse outward from core.
+     * Nodes shift position slightly.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(9000)) {
+      const p = (elapsed - T(6500)) / T(2500);
+      showOnly('t3');
+
+      drawGlow(W * 0.5, '170,160,210', lerp(0.06, 0.1, p));
+      drawRings(elapsed, easeInOut(p));
+
+      /* Nodes drift — subtle organic movement */
+      nodes[0].alpha = 1;
+      drawNode(nodes[0].x, nodes[0].y, nodes[0].r, 1, true);
+      for (let i = 1; i <= 7; i++) {
+        const nd = nodes[i];
+        if (nd.alpha <= 0) continue;
+        const drift = Math.sin(elapsed * 0.001 * (0.5 + rng(i*3) * 0.5) + nd.born * 10) * W * 0.015;
+        const nx = nd.ox + drift;
+        const ny = nd.oy + Math.cos(elapsed * 0.0008 + nd.born * 8) * H * 0.012;
+        drawConnection(nodes[0].x, nodes[0].y, nx, ny, nd.alpha * 0.4);
+        drawNode(nx, ny, nd.r, nd.alpha, false);
+      }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S4  6000–9667ms  "Right partnerships…unlock growth you couldn't see alone."
+     * Outer nodes fly in from beyond the frame and connect.
+     * Network becomes expansive.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(14500)) {
+      const p = (elapsed - T(9000)) / T(5500);
+      showOnly('t4');
+
+      drawGlow(W * 0.55, '155,165,215', lerp(0.1, 0.15, p));
+      drawRings(elapsed, lerp(1, 0.3, p));
+
+      /* Inner nodes */
+      nodes[0].alpha = 1;
+      drawNode(nodes[0].x, nodes[0].y, nodes[0].r, 1, true);
+      for (let i = 1; i <= 7; i++) {
+        const nd = nodes[i];
+        const drift = Math.sin(elapsed * 0.001 * (0.5 + rng(i*3) * 0.5) + nd.born * 10) * W * 0.015;
+        const nx = nd.ox + drift;
+        const ny = nd.oy + Math.cos(elapsed * 0.0008 + nd.born * 8) * H * 0.012;
+        drawConnection(nodes[0].x, nodes[0].y, nx, ny, 0.35);
+        drawNode(nx, ny, nd.r, 1, false);
+      }
+
+      /* Outer nodes fly in */
+      for (let i = 8; i <= 17; i++) {
+        const nd     = nodes[i];
+        const unlock = (i-8) / 10;
+        if (p < unlock) continue;
+        const arrive = clamp((p - unlock) / 0.15, 0, 1);
+        nd.alpha     = arrive;
+        /* Interpolate from off-screen to target */
+        const px = lerp(nd.x, nd.tx, easeOut(arrive));
+        const py = lerp(nd.y, nd.ty, easeOut(arrive));
+        /* Connect to nearest inner node */
+        const nearIdx = 1 + Math.floor(rng(i*7) * 7);
+        const inner   = nodes[nearIdx];
+        const inDrift = Math.sin(elapsed * 0.001 * (0.5 + rng(nearIdx*3) * 0.5) + inner.born * 10) * W * 0.015;
+        drawConnection(inner.ox + inDrift, inner.oy, px, py, arrive * 0.4);
+        /* Also connect some to core */
+        if (rng(i*11) > 0.5) {
+          drawConnection(nodes[0].x, nodes[0].y, px, py, arrive * 0.2);
+        }
+        drawNode(px, py, nd.r, arrive, false);
+      }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S5  9667–12333ms  "Most powerful ideas don't come from inside the box."
+     * A box appears at centre containing the network,
+     * then shatters outward — fragments fly in all directions.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(18500)) {
+      const p      = (elapsed - T(14500)) / T(4000);
+      const boxIn  = clamp(p * 3, 0, 1);       // box draws in 0→0.33 of p
+      const boxOut = clamp((p - 0.35) / 0.65, 0, 1); // shatters rest of p
+      showOnly('t5');
+
+      /* Fading network residue */
+      const netAlpha = lerp(1, 0, clamp(p * 2.5, 0, 1));
+      if (netAlpha > 0.01) {
+        nodes[0].alpha = netAlpha;
+        drawNode(nodes[0].x, nodes[0].y, nodes[0].r, netAlpha, true);
+        for (let i = 1; i <= 7; i++) {
+          const nd = nodes[i];
+          drawNode(nd.ox, nd.oy, nd.r, netAlpha * 0.6, false);
+          drawConnection(nodes[0].x, nodes[0].y, nd.ox, nd.oy, netAlpha * 0.25);
+        }
+      }
+
+      /* Box appears */
+      if (boxOut < 0.01) {
+        drawBox(easeInOut(boxIn) * 0.7);
+      }
+
+      /* Box shatters */
+      if (boxOut > 0) {
+        drawShards(boxOut, 1 - boxOut * 0.5);
+        /* Flash on shatter */
+        const flash = clamp((boxOut) * 3, 0, 1) * (1 - boxOut);
+        if (flash > 0.01) {
+          ctx.fillStyle = `rgba(220,215,240,${flash * 0.08})`;
+          ctx.fillRect(0, 0, W, H);
+        }
+      }
+
+      drawGlow(W * 0.45, '160,150,210', lerp(0.12, 0.06, p));
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S6  12333–15000ms  "Built for the landscape we're actually in."
+     * Fragments settle. A flowing landscape horizon forms.
+     * Stars appear above it.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(22500)) {
+      const p = (elapsed - T(18500)) / T(4000);
+      showOnly('t6');
+
+      /* Residual shards fading */
+      const shardAlpha = lerp(0.5, 0, clamp(p * 2.5, 0, 1));
+      drawShards(1, shardAlpha);
+
+      /* Landscape rises in */
+      const landAlpha = easeInOut(clamp(p * 1.5, 0, 1));
+      drawLandscape(elapsed, landAlpha);
+      drawGlow(W * 0.5, '150,155,210', lerp(0.06, 0.1, p));
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S7  15000–18000ms  "This is where growth begins."
+     * Landscape gently visible. Single bright star rises.
+     * Slow pulsing corona. Clean. Hopeful.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else {
+      const p     = clamp((elapsed - T(22500)) / T(4500), 0, 1);
+      const pulse = Math.sin(elapsed * 0.0015) * 0.5 + 0.5;
+      showOnly('t7');
+
+      /* Dim landscape backdrop */
+      drawLandscape(elapsed, lerp(0.35, 0.22, p));
+      drawGlow(W * 0.55, '155,150,215', lerp(0.1, 0.14, pulse) * easeInOut(p));
+
+      /* Star appears */
+      const starAlpha = easeInOut(clamp(p * 1.8, 0, 1));
+      drawGrowthStar(starAlpha, pulse);
+    }
+
+    if (elapsed < DURATION) {
+      animId = requestAnimationFrame(animate);
+    } else {
+      showOnly('t7');
+      timerFill.style.width = '100%';
+      setTimeout(() => { playBtn.style.display = 'flex'; playing = false; }, 800);
+    }
+  }
+
+  /* ── Start / replay ── */
+  function startAnim() {
+    if (playing) return;
+    playing = true; startTime = null;
+    timerFill.style.width = '0%';
+    hideAll();
+    cancelAnimationFrame(animId);
+    resize();      // ✅ fresh dimensions before geometry init
+    initScene();   // ✅ always after resize so W/H are valid
+    animId = requestAnimationFrame(animate);
+  }
+
+  ['click', 'touchstart'].forEach(evt =>
+    playBtn.addEventListener(evt, e => {
+      e.preventDefault();
+      playBtn.style.display = 'none';
+      startAnim();
+    }, { passive: false })
+  );
+</script>
+</body>
+</html>
