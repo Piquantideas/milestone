@@ -29,10 +29,10 @@
       overflow: hidden;
       font-family: 'Playfair Display', serif;
       will-change: transform;
-      /* ✅ container-type so cqi font units resolve against stage width, not viewport */
+      /* ✅ cqi units resolve against stage width, not the viewport */
       container-type: inline-size;
     }
-    /* ✅ dvh fallback for browsers without dynamic viewport height support */
+    /* ✅ dvh fallback for browsers without dynamic viewport height */
     @supports not (height: 100dvh) {
       #stage { --stage-w: min(420px, min(100vw, calc(100vh * 9 / 16))); }
     }
@@ -44,6 +44,7 @@
       display: block;
     }
 
+    /* ── Text layer ── */
     #text-layer {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
@@ -51,21 +52,25 @@
       flex-direction: column;
     }
 
+    /*
+     * ✅ All body copy uses the same clamp — nothing falls below 14px on mobile.
+     * cqi resolves against the stage container so it scales with the video width,
+     * not the full viewport (important on tall portrait phones where stage is narrow).
+     */
     .txt {
       color: #f0ece4;
       font-family: 'Playfair Display', serif;
       font-weight: 400;
-      /* ✅ cqi resolves against the stage container, not the viewport */
       font-size: clamp(14px, 5.5cqi, 20px);
       letter-spacing: 0.06em;
       opacity: 0;
-      /* ✅ visibility paired with opacity — hidden elements won't intercept touches */
+      /* ✅ visibility + opacity pair — hidden elements never intercept touches */
       visibility: hidden;
       transition: opacity 0.85s ease, visibility 0s linear 0.85s;
-      line-height: 1.6;
-      max-width: 78%;
+      line-height: 1.65;
+      max-width: 80%;
       font-style: italic;
-      /* ✅ Prevents iOS Safari from inflating font sizes */
+      /* ✅ Prevent iOS Safari font inflation */
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
       position: absolute;
@@ -74,48 +79,46 @@
       opacity: 1; visibility: visible;
       transition: opacity 0.85s ease, visibility 0s linear 0s;
     }
-    .txt.sub {
-      font-size: clamp(10px, 3.2cqi, 13px);
-      letter-spacing: 0.18em;
-      color: rgba(240,236,228,0.5);
-      font-style: normal;
-      font-weight: 300;
-    }
 
+    /* ── Final two-line block ── */
     #final-wrap {
       position: absolute;
       display: flex; flex-direction: column;
-      align-items: center; gap: 6px;
+      align-items: center; gap: 10px;
       pointer-events: none;
     }
     .f-line {
       font-family: 'Playfair Display', serif;
       font-style: italic;
       font-weight: 400;
+      /* ✅ Same floor as body copy — readable on smallest phones */
       font-size: clamp(14px, 5.5cqi, 20px);
       letter-spacing: 0.06em;
-      color: #f0ece4;
+      color: rgba(240,236,228,0.6);
       opacity: 0; visibility: hidden;
-      transition: opacity 0.85s ease, visibility 0s linear 0.85s;
+      transition: opacity 0.9s ease, visibility 0s linear 0.9s;
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
       text-align: center;
+      max-width: 80%;
     }
-    .f-line.dim {
-      color: rgba(240,236,228,0.45);
-      font-size: clamp(12px, 4cqi, 16px);
-    }
-    .f-line.bright {
-      font-size: clamp(16px, 6.5cqi, 24px);
+    /* "It's earned." — larger, brighter, slower reveal */
+    .f-line.earned {
+      font-size: clamp(18px, 7cqi, 26px);
+      color: #f0ece4;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+      transition: opacity 1.4s ease, visibility 0s linear 0s;
     }
     .f-line.visible {
       opacity: 1; visibility: visible;
-      transition: opacity 0.85s ease, visibility 0s linear 0s;
+      transition: opacity 0.9s ease, visibility 0s linear 0s;
     }
-    .f-line.bright.visible {
-      transition: opacity 1.3s ease, visibility 0s linear 0s;
+    .f-line.earned.visible {
+      transition: opacity 1.4s ease, visibility 0s linear 0s;
     }
 
+    /* ── Timer ── */
     #timer-bar {
       position: absolute; bottom: 18px; left: 50%;
       transform: translateX(-50%);
@@ -127,14 +130,15 @@
       transition: width 0.1s linear;
     }
 
+    /* ── Play button ── */
     #play-btn {
       position: absolute; inset: 0;
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; background: rgba(0,0,0,0.6); z-index: 10;
       flex-direction: column; gap: 12px;
-      /* ✅ Removes 300ms tap delay on mobile */
+      /* ✅ No 300ms tap delay on mobile */
       touch-action: manipulation;
-      /* ✅ No tap highlight flash on iOS */
+      /* ✅ No tap flash on iOS */
       -webkit-tap-highlight-color: transparent;
     }
     #play-btn svg { opacity: 0.7; }
@@ -150,13 +154,20 @@
   <canvas id="c"></canvas>
 
   <div id="text-layer">
-    <div class="txt"     id="t1">Consumers don't behave<br>the way they used to.</div>
-    <div class="txt"     id="t2">Channels have multiplied.<br>Attention has fragmented.</div>
-    <div class="txt"     id="t3">Many brands are still spending big —<br>but the returns keep shrinking.</div>
-    <div class="txt sub" id="t4">The distance between your brand<br>and your customer is growing.</div>
+    <!-- S1 -->
+    <div class="txt" id="t1">Consumers don't behave<br>the way they used to.</div>
+    <!-- S2 -->
+    <div class="txt" id="t2">Channels have multiplied.</div>
+    <!-- S3 -->
+    <div class="txt" id="t3">Attention has fragmented.</div>
+    <!-- S4 -->
+    <div class="txt" id="t4">Many brands are still spending big —<br>but the returns keep shrinking.</div>
+    <!-- S5 -->
+    <div class="txt" id="t5">The distance between your brand<br>and your customer is growing.</div>
+    <!-- S6 + S7: final two-beat close -->
     <div id="final-wrap">
-      <div class="f-line dim"    id="f1">Relevance isn't given.</div>
-      <div class="f-line bright" id="f2">It's earned.</div>
+      <div class="f-line"        id="f1">Relevance isn't given.</div>
+      <div class="f-line earned" id="f2">It's earned.</div>
     </div>
   </div>
 
@@ -172,6 +183,7 @@
 </div>
 
 <script>
+  /* ── Elements ── */
   const canvas    = document.getElementById('c');
   const ctx       = canvas.getContext('2d');
   const stage     = document.getElementById('stage');
@@ -185,28 +197,31 @@
     t2: document.getElementById('t2'),
     t3: document.getElementById('t3'),
     t4: document.getElementById('t4'),
+    t5: document.getElementById('t5'),
   };
 
   /* ── Timing ──
-   *  27 000ms raw / 1.5 speed = 18 000ms real
+   *  28 350ms raw / 1.35 = 21 000ms real  (21s clip)
    *
-   *  Scene   raw ms       real ms      copy
-   *  S1      0–4500       0–3000       "Consumers don't behave…"
-   *  S2      4500–9500    3000–6333    "Channels multiplied…"
-   *  S3      9500–15000   6333–10000   "Many brands…returns shrinking"
-   *  S4      15000–20500  10000–13667  "Distance…is growing"
-   *  S5      20500–23500  13667–15667  "Relevance isn't given."
-   *  S6      23500–27000  15667–18000  "It's earned."
+   *  Scene  raw ms          real ms         copy
+   *  S1     0 – 4050        0 – 3000        "Consumers don't behave…"
+   *  S2     4050 – 7425     3000 – 5500     "Channels have multiplied."
+   *  S3     7425 – 10800    5500 – 8000     "Attention has fragmented."
+   *  S4     10800 – 15525   8000 – 11500    "Many brands…returns shrinking."
+   *  S5     15525 – 20250   11500 – 15000   "The distance…is growing."
+   *  S6     20250 – 23625   15000 – 17500   "Relevance isn't given."
+   *  S7     23625 – 28350   17500 – 21000   "It's earned."
    */
-  const SPEED    = 1.5;
-  const DURATION = Math.round(27000 / SPEED); // 18 000ms
+  const SPEED    = 1.35;
+  const DURATION = Math.round(28350 / SPEED); // 21 000ms
   const T        = ms => Math.round(ms / SPEED);
 
+  /* ── State ── */
   let W, H, cx, cy;
   let animId, startTime, playing = false;
   let f1Shown = false, f2Shown = false;
 
-  // ✅ Cap DPR at 2 — no visible gain above 2×, saves significant GPU memory
+  /* ✅ Cap DPR at 2 — DPR 3/4 wastes GPU memory for no visible gain */
   const DPR = Math.min(window.devicePixelRatio || 1, 2);
 
   let waves = [];
@@ -218,11 +233,11 @@
     W = r.width; H = r.height;
     canvas.width  = Math.round(W * DPR);
     canvas.height = Math.round(H * DPR);
-    // ✅ setTransform instead of scale — prevents compounding on repeat resize
+    /* ✅ setTransform — no compounding on repeated resize */
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
     cx = W / 2; cy = H / 2;
   }
-  // ✅ Debounced — prevents thrashing during orientation change on mobile
+  /* ✅ Debounced ResizeObserver — handles orientation change on mobile */
   new ResizeObserver(() => {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(resize, 60);
@@ -230,32 +245,40 @@
   resize();
 
   /* ── Init waves ──
-   * ✅ FIX 4: Always called after resize() so H/W are valid.
-   * ✅ FIX 8: lockedAlpha set once at init — no per-frame Math.random() flicker.
+   * ✅ Called after resize() so H is valid.
+   * ✅ lockedAlpha set once at init — no per-frame Math.random() flicker.
    */
   function initWaves() {
     waves = [];
+    // Hero wave — single clean sine
     waves.push({
       freq: 2.2, amp: H * 0.06, phase: 0, speed: 0.9,
       color: [220, 215, 200], isHero: true, yOffset: 0,
       lockedAlpha: 0.75,
     });
+    // 14 noise waves — stable alpha, no per-frame random
     for (let i = 0; i < 14; i++) {
       waves.push({
-        freq:  1.2 + Math.random() * 4,
-        amp:   H * (0.025 + Math.random() * 0.085),
-        phase: Math.random() * Math.PI * 2,
-        speed: (0.3 + Math.random() * 1.2) * (Math.random() < 0.5 ? 1 : -1),
+        freq:  1.2 + rng(i * 3) * 4,
+        amp:   H * (0.025 + rng(i * 5) * 0.085),
+        phase: rng(i * 7) * Math.PI * 2,
+        speed: (0.3 + rng(i * 11) * 1.2) * (rng(i * 13) < 0.5 ? 1 : -1),
         color: [
-          180 + Math.floor(Math.random() * 60),
-          175 + Math.floor(Math.random() * 50),
-          195 + Math.floor(Math.random() * 60),
+          180 + Math.floor(rng(i * 17) * 60),
+          175 + Math.floor(rng(i * 19) * 50),
+          195 + Math.floor(rng(i * 23) * 60),
         ],
         isHero: false,
-        yOffset: (Math.random() - 0.5) * H * 0.3,
-        lockedAlpha: 0.22 + Math.random() * 0.14,
+        yOffset: (rng(i * 29) - 0.5) * H * 0.3,
+        lockedAlpha: 0.22 + rng(i * 31) * 0.14,
       });
     }
+  }
+
+  /* ── Deterministic RNG — no per-frame flicker ── */
+  function rng(s) {
+    const x = Math.sin(s * 127.1 + 311.7) * 43758.5453;
+    return x - Math.floor(x);
   }
 
   /* ── Helpers ── */
@@ -263,8 +286,8 @@
   function lerp(a, b, t) { return a + (b-a)*t; }
   function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-  /* ── Draw wave ──
-   * ✅ FIX 6: Step scales with stage width — smooth curves on narrow screens.
+  /* ── Draw single wave ──
+   * ✅ Step scales with stage width — smooth on narrow screens.
    */
   function drawWave(w, elapsed, alpha) {
     if (alpha < 0.005) return;
@@ -284,13 +307,12 @@
   }
 
   /* ── Draw static noise ──
-   * ✅ FIX 2: Batched by alpha bucket — reduces fillStyle string allocations
-   *    from ~224/frame down to 6/frame, preventing GC jank on low-end Android.
+   * ✅ Batched by alpha bucket — 6 fillStyle changes/frame vs ~280 previously.
    */
   function drawStatic(intensity) {
     if (intensity < 0.01) return;
-    const total   = Math.floor(intensity * 280);
-    const buckets = 6;
+    const total     = Math.floor(intensity * 280);
+    const buckets   = 6;
     const perBucket = Math.floor(total / buckets);
     for (let b = 0; b < buckets; b++) {
       const a = ((b + 1) / buckets) * intensity * 0.5;
@@ -306,10 +328,9 @@
     }
   }
 
-  /* ── Draw drifting dot pair (S4) ──
-   * ✅ FIX 1: letterSpacing reset to '0' after use — prevents leaking into
-   *    other canvas operations on Android browsers that support it.
-   * ✅ FIX 5: Font string built once per call, not per-dot.
+  /* ── Draw drifting brand/customer dot pair (S5) ──
+   * ✅ letterSpacing reset after use — prevents leaking on Android.
+   * ✅ Font string built once per call.
    */
   function drawDots(alpha, separation) {
     if (alpha < 0.005) return;
@@ -318,7 +339,7 @@
     const dotY  = cy - H * 0.02;
     const glowR = W * 0.06;
 
-    // Connecting line
+    // Connecting line fades as dots drift apart
     const lineAlpha = clamp(alpha * (1 - separation * 1.1), 0, 1);
     if (lineAlpha > 0.005) {
       const grad = ctx.createLinearGradient(ax, dotY, bx, dotY);
@@ -332,13 +353,12 @@
       ctx.strokeStyle = grad; ctx.lineWidth = 0.6; ctx.stroke();
     }
 
-    // ✅ FIX 5: One font string set once for both labels
     const labelSz = clamp(W * 0.022, 7, 10);
     ctx.font      = `300 ${labelSz}px 'Playfair Display', serif`;
     ctx.textAlign = 'center';
-    ctx.letterSpacing = '0.18em'; // supported on Chrome/Android; ignored on iOS Safari
+    ctx.letterSpacing = '0.18em';
 
-    // Brand dot (warm, left)
+    // Brand dot — warm left
     const glA = ctx.createRadialGradient(ax, dotY, 0, ax, dotY, glowR);
     glA.addColorStop(0, `rgba(240,230,200,${alpha * 0.85})`);
     glA.addColorStop(1, 'rgba(240,230,200,0)');
@@ -349,7 +369,7 @@
     ctx.fillStyle = `rgba(240,230,200,${alpha * 0.45})`;
     ctx.fillText('BRAND', ax, dotY + W * 0.1);
 
-    // Customer dot (cool, right)
+    // Customer dot — cool right
     const glB = ctx.createRadialGradient(bx, dotY, 0, bx, dotY, glowR);
     glB.addColorStop(0, `rgba(200,210,240,${alpha * 0.85})`);
     glB.addColorStop(1, 'rgba(200,210,240,0)');
@@ -360,15 +380,14 @@
     ctx.fillStyle = `rgba(200,210,240,${alpha * 0.45})`;
     ctx.fillText('CUSTOMER', bx, dotY + W * 0.1);
 
-    // ✅ FIX 1: Always reset after use
     ctx.letterSpacing = '0';
     ctx.textAlign     = 'left';
   }
 
-  /* ── Draw earned line ── */
+  /* ── Draw "earned" clean line (S7) ── */
   function drawEarnedLine(progress) {
     if (progress < 0.005) return;
-    const y   = cy + H * 0.14;
+    const y   = cy + H * 0.18;
     const len = W * 0.55 * easeInOut(progress);
     const x0  = cx - len / 2;
     const x1  = cx + len / 2;
@@ -393,7 +412,9 @@
     if (id && texts[id]) texts[id].classList.add('visible');
   }
 
-  /* ── Animation loop ── */
+  /* ════════════════════════════════════════
+   *  MAIN ANIMATION LOOP
+   * ════════════════════════════════════════ */
   function animate(ts) {
     if (!startTime) startTime = ts;
     const elapsed = ts - startTime;
@@ -402,41 +423,67 @@
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
 
-    /* S1 ─ 0–3000ms: Single clean wave fades in */
-    if (elapsed < T(4500)) {
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S1  0–3000ms  "Consumers don't behave the way they used to."
+     * Single clean hero wave fades in. Ordered. Calm. Pre-chaos.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    if (elapsed < T(4050)) {
+      const p         = elapsed / T(4050);
       const heroAlpha = clamp(elapsed / T(1200), 0, 0.75);
       showOnly('t1');
-      const gp = elapsed / T(4500);
-      const g  = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.5);
-      g.addColorStop(0, `rgba(180,175,210,${gp * 0.04})`);
+
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.5);
+      g.addColorStop(0, `rgba(180,175,210,${p * 0.04})`);
       g.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.beginPath(); ctx.arc(cx, cy, W*0.5, 0, Math.PI*2);
       ctx.fillStyle = g; ctx.fill();
       drawWave(waves[0], elapsed, heroAlpha);
 
-    /* S2 ─ 3000–6333ms: Noise waves multiply in. Hero dims.
-     * ✅ FIX 3 & 8: No Math.random() in alpha — uses stable lockedAlpha */
-    } else if (elapsed < T(9500)) {
-      const p = (elapsed - T(4500)) / T(5000);
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S2  3000–5500ms  "Channels have multiplied."
+     * Noise waves begin appearing one by one. Hero dims.
+     * ✅ lockedAlpha — no per-frame flicker.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(7425)) {
+      const p = (elapsed - T(4050)) / T(3375);
       showOnly('t2');
-      drawWave(waves[0], elapsed, lerp(0.75, 0.22, p));
+
+      drawWave(waves[0], elapsed, lerp(0.75, 0.3, p));
       for (let i = 1; i <= 14; i++) {
         const unlock = (i - 1) / 14;
         if (p < unlock) continue;
-        const fadeIn = clamp((p - unlock) / 0.07, 0, 1);
+        const fadeIn = clamp((p - unlock) / 0.08, 0, 1);
         drawWave(waves[i], elapsed, fadeIn * waves[i].lockedAlpha);
       }
 
-    /* S3 ─ 6333–10000ms: Full noise + particles + shrinking bar */
-    } else if (elapsed < T(15000)) {
-      const p = (elapsed - T(9500)) / T(5500);
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S3  5500–8000ms  "Attention has fragmented."
+     * All noise waves now visible. Full chaotic field.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(10800)) {
+      const p = (elapsed - T(7425)) / T(3375);
       showOnly('t3');
-      drawWave(waves[0], elapsed, lerp(0.22, 0.07, p));
+
+      drawWave(waves[0], elapsed, lerp(0.3, 0.1, p));
+      for (let i = 1; i <= 14; i++) {
+        drawWave(waves[i], elapsed, waves[i].lockedAlpha);
+      }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S4  8000–11500ms  "Many brands still spending big — returns shrinking."
+     * Full noise field. Particles flow in but disperse.
+     * A shrinking bar visualises diminishing returns.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(15525)) {
+      const p = (elapsed - T(10800)) / T(4725);
+      showOnly('t4');
+
+      drawWave(waves[0], elapsed, lerp(0.1, 0.06, p));
       for (let i = 1; i <= 14; i++) {
         drawWave(waves[i], elapsed, lerp(waves[i].lockedAlpha, 0.08, p));
       }
-      // Deterministic particle positions — no flicker
-      const rng = (s) => { const x = Math.sin(s * 127.1) * 43758.5453; return x - Math.floor(x); };
+
+      // Deterministic spending particles — no per-frame flicker
       for (let i = 0; i < 28; i++) {
         const t    = (elapsed * 0.00028 + rng(i * 7)) % 1;
         const endX = cx * (0.55 + rng(i * 3) * 0.4);
@@ -451,27 +498,41 @@
         ctx.beginPath(); ctx.arc(px, py, 4, 0, Math.PI*2);
         ctx.fillStyle = gr; ctx.fill();
       }
-      const barW = W * 0.42 * lerp(1, 0.18, easeInOut(p));
-      const barA = lerp(0, 0.32, easeInOut(p));
+
+      // Shrinking returns bar
+      const barW = W * 0.42 * lerp(1, 0.12, easeInOut(p));
+      const barA = lerp(0, 0.35, easeInOut(p));
       ctx.fillStyle = `rgba(210,200,180,${barA})`;
       ctx.fillRect(cx - barW / 2, cy + H * 0.2, barW, H * 0.008);
 
-    /* S4 ─ 10000–13667ms: Two dots drift apart */
-    } else if (elapsed < T(20500)) {
-      const p        = (elapsed - T(15000)) / T(5500);
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S5  11500–15000ms  "Distance between brand and customer is growing."
+     * Two glowing dots (BRAND / CUSTOMER) drift apart.
+     * Connecting line fades as gap widens.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(20250)) {
+      const p        = (elapsed - T(15525)) / T(4725);
       const sep      = easeInOut(clamp(p, 0, 1));
-      const dotAlpha = clamp((elapsed - T(15000)) / T(800), 0, 1);
-      showOnly('t4');
+      const dotAlpha = clamp((elapsed - T(15525)) / T(800), 0, 1);
+      showOnly('t5');
+
+      // Dim wave residue
       for (let i = 1; i <= 6; i++) drawWave(waves[i], elapsed, 0.05);
       drawDots(dotAlpha, sep);
 
-    /* S5 ─ 13667–15667ms: "Relevance isn't given." + static noise
-     * ✅ FIX 7: Direct class management — no hideAll() each frame */
-    } else if (elapsed < T(23500)) {
-      const p = (elapsed - T(20500)) / T(3000);
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S6  15000–17500ms  "Relevance isn't given."
+     * Static noise fills the screen. Signal broken.
+     * f1 fades in. f2 hidden still.
+     * ✅ Direct class management — no hideAll() each frame.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(23625)) {
+      const p = (elapsed - T(20250)) / T(3375);
       Object.values(texts).forEach(el => el.classList.remove('visible'));
       if (!f1Shown) { f1Shown = true; f1.classList.add('visible'); }
+
       drawStatic(easeInOut(clamp(p * 2, 0, 1)) * 0.7);
+
       const ga = Math.sin(p * Math.PI) * 0.06;
       const g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.5);
       g2.addColorStop(0, `rgba(160,140,200,${ga})`);
@@ -479,15 +540,25 @@
       ctx.beginPath(); ctx.arc(cx, cy, W*0.5, 0, Math.PI*2);
       ctx.fillStyle = g2; ctx.fill();
 
-    /* S6 ─ 15667–18000ms: "It's earned." — noise clears, clean line
-     * ✅ FIX 7: f1 stays visible (already added in S5), no re-trigger */
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S7  17500–21000ms  "It's earned."
+     * Noise clears. One clean line draws itself.
+     * f1 stays visible. f2 fades in shortly after.
+     * ✅ f1 never re-triggered — no fade flicker.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
     } else {
-      const p = clamp((elapsed - T(23500)) / T(3500), 0, 1);
+      const p = clamp((elapsed - T(23625)) / T(4725), 0, 1);
       Object.values(texts).forEach(el => el.classList.remove('visible'));
       if (!f1Shown) { f1Shown = true; f1.classList.add('visible'); }
-      if (!f2Shown && p > 0.15) { f2Shown = true; f2.classList.add('visible'); }
+      if (!f2Shown && p > 0.18) { f2Shown = true; f2.classList.add('visible'); }
+
+      // Noise clears
       drawStatic((1 - easeInOut(clamp(p * 3, 0, 1))) * 0.4);
+
+      // Clean line draws in
       drawEarnedLine(easeInOut(clamp((p - 0.1) / 0.6, 0, 1)));
+
+      // Soft final glow
       const ga = easeInOut(clamp((p - 0.2) / 0.5, 0, 1)) * 0.055;
       const g3 = ctx.createRadialGradient(cx, cy, 0, cx, cy, W * 0.6);
       g3.addColorStop(0, `rgba(200,195,230,${ga})`);
@@ -499,6 +570,7 @@
     if (elapsed < DURATION) {
       animId = requestAnimationFrame(animate);
     } else {
+      // Ensure clean final state
       Object.values(texts).forEach(el => el.classList.remove('visible'));
       if (!f1Shown) { f1Shown = true; f1.classList.add('visible'); }
       if (!f2Shown) { f2Shown = true; f2.classList.add('visible'); }
@@ -508,21 +580,23 @@
   }
 
   /* ── Start / replay ──
-   * ✅ FIX 4: resize() called before initWaves() so wave amplitudes use valid H/W
+   * ✅ resize() always before initWaves() so H/W are valid for wave amplitudes.
    */
   function startAnim() {
     if (playing) return;
-    playing = true; startTime = null;
-    f1Shown = false; f2Shown = false;
+    playing   = true;
+    startTime = null;
+    f1Shown   = false;
+    f2Shown   = false;
     timerFill.style.width = '0%';
     hideAll();
     cancelAnimationFrame(animId);
-    resize();     // ✅ guarantee fresh dimensions
-    initWaves();  // ✅ safe — H is valid
+    resize();
+    initWaves();
     animId = requestAnimationFrame(animate);
   }
 
-  // ✅ touchstart + click — instant response on mobile, no 300ms delay
+  /* ✅ touchstart + click — no 300ms delay on mobile, preventDefault stops ghost clicks */
   ['click', 'touchstart'].forEach(evt =>
     playBtn.addEventListener(evt, e => {
       e.preventDefault();
