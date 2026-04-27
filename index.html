@@ -2,423 +2,474 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- ✅ Viewport meta: essential for correct mobile scaling -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Marketing Animation</title>
+  <title>Are You Lost?</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,500;1,400&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap');
 
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
-    /* ✅ Full-viewport wrapper that centres the stage on any screen */
     html, body {
-      width: 100%;
-      height: 100%;
+      width: 100%; height: 100%;
       background: #000;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      /* ✅ Prevent iOS bounce / overscroll */
+      display: flex; align-items: center; justify-content: center;
       overscroll-behavior: none;
       overflow: hidden;
-      /* ✅ Safe-area insets for notched phones */
       padding: env(safe-area-inset-top) env(safe-area-inset-right)
                env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
 
     #stage {
-      /*
-       * ✅ Responsive sizing strategy:
-       *   - On portrait mobile  → fill the full viewport height, width follows aspect ratio
-       *   - On desktop / landscape → cap height so it never overflows
-       *   - max-width keeps it from becoming huge on wide screens
-       */
       width: min(420px, 100vw, calc(100vh * 9 / 16));
       aspect-ratio: 9 / 16;
       background: #000;
       position: relative;
       overflow: hidden;
       font-family: 'Playfair Display', serif;
-      /* ✅ GPU compositing hint – helps canvas animation on mobile */
       will-change: transform;
     }
 
     canvas {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      /* ✅ Prevent canvas from being blurry on Retina/high-DPR screens */
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
       image-rendering: crisp-edges;
     }
 
+    /* ── Text layer ── */
     #text-layer {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      pointer-events: none;
-      flex-direction: column;
-      gap: 10px;
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; pointer-events: none;
+      flex-direction: column; gap: 8px;
     }
 
     .txt {
       color: #f0ece4;
       font-family: 'Playfair Display', serif;
       font-weight: 400;
-      /*
-       * ✅ clamp() floors raised slightly so text stays readable on small phones,
-       *    and we reference the stage width via container queries where possible,
-       *    falling back to vw which now matches stage width on portrait mobile.
-       */
       font-size: clamp(14px, 3.8vw, 20px);
       letter-spacing: 0.06em;
       opacity: 0;
-      transition: opacity 0.9s ease;
+      transition: opacity 0.85s ease;
       line-height: 1.55;
       max-width: 80%;
       font-style: italic;
-      /* ✅ Prevent iOS text size inflation */
       -webkit-text-size-adjust: 100%;
       text-size-adjust: 100%;
+      position: absolute; /* stack all lines in centre, show one at a time */
     }
 
+    /* sub-line variant: smaller, spaced, non-italic */
     .txt.sub {
-      font-size: clamp(9px, 2vw, 12px);
-      letter-spacing: 0.22em;
-      color: rgba(240, 236, 228, 0.55);
+      font-size: clamp(9px, 2.1vw, 12px);
+      letter-spacing: 0.24em;
+      color: rgba(240, 236, 228, 0.52);
       font-style: normal;
       font-weight: 300;
     }
 
-    .txt.visible { opacity: 1; }
-
-    #timer-bar {
+    /* trio lines share a wrapper that stacks them vertically */
+    #trio-wrap {
       position: absolute;
-      bottom: 18px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 60%;
-      height: 1px;
-      background: rgba(255, 255, 255, 0.08);
+      display: flex; flex-direction: column;
+      align-items: center; gap: 9px;
+      opacity: 0;
+      transition: opacity 0.85s ease;
+    }
+    #trio-wrap .trio-line {
+      color: rgba(240, 236, 228, 0.55);
+      font-family: 'Playfair Display', serif;
+      font-style: normal;
+      font-weight: 300;
+      font-size: clamp(9px, 2.1vw, 12px);
+      letter-spacing: 0.24em;
+      text-align: center;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+    }
+    #trio-wrap.visible { opacity: 1; }
+
+    /* "Are you lost?" gets a special larger treatment */
+    #t6 {
+      font-size: clamp(15px, 4.2vw, 24px);
+      letter-spacing: 0.04em;
+      font-style: italic;
+      font-weight: 400;
+      color: #f0ece4;
+      transition: opacity 1.4s ease;
     }
 
+    .txt.visible { opacity: 1; }
+
+    /* ── Timer bar ── */
+    #timer-bar {
+      position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
+      width: 60%; height: 1px; background: rgba(255,255,255,0.08);
+    }
     #timer-fill {
-      height: 100%;
-      background: rgba(255, 255, 255, 0.25);
-      width: 0%;
-      /* ✅ Smooth fill transition avoids janky jumps */
+      height: 100%; background: rgba(255,255,255,0.25); width: 0%;
       transition: width 0.1s linear;
     }
 
+    /* ── Play button ── */
     #play-btn {
-      position: absolute;
-      inset: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      background: rgba(0, 0, 0, 0.6);
-      z-index: 10;
-      flex-direction: column;
-      gap: 12px;
-      /* ✅ Ensure tap works on iOS without 300 ms delay */
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; background: rgba(0,0,0,0.6); z-index: 10;
+      flex-direction: column; gap: 12px;
       touch-action: manipulation;
     }
-
     #play-btn svg { opacity: 0.7; }
-
     #play-label {
-      color: rgba(255, 255, 255, 0.4);
-      font-size: 10px;
-      letter-spacing: 0.25em;
-      font-family: 'Playfair Display', serif;
-      font-style: italic;
+      color: rgba(255,255,255,0.4);
+      font-size: 10px; letter-spacing: 0.25em;
+      font-family: 'Playfair Display', serif; font-style: italic;
     }
   </style>
 </head>
 <body>
-  <div id="stage">
-    <canvas id="c"></canvas>
-    <div id="text-layer">
-      <div class="txt" id="t1">Marketing used to be linear.</div>
-      <div class="txt sub" id="t2">Awareness &nbsp;→&nbsp; Consideration &nbsp;→&nbsp; Conversion</div>
-      <div class="txt" id="t3">That world is gone.</div>
-      <div class="txt" id="t4">Today…</div>
-      <div class="txt" id="t5">Attention doesn't follow a path.</div>
+<div id="stage">
+  <canvas id="c"></canvas>
+
+  <div id="text-layer">
+    <!-- Scene 1 -->
+    <div class="txt" id="t1">The world has changed.</div>
+    <!-- Scene 2 -->
+    <div class="txt" id="t2">The marketing funnel<br>is no longer linear.</div>
+    <!-- Scene 3: three rapid sub-lines in a shared wrapper -->
+    <div id="trio-wrap">
+      <div class="trio-line" id="tA">NEW CHANNELS</div>
+      <div class="trio-line" id="tB">SHIFTING CONSUMERS</div>
+      <div class="trio-line" id="tC">EVOLVING TRENDS</div>
     </div>
-    <div id="timer-bar"><div id="timer-fill"></div></div>
-    <div id="play-btn">
-      <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
-        <circle cx="22" cy="22" r="21" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
-        <polygon points="17,14 34,22 17,30" fill="rgba(255,255,255,0.7)"/>
-      </svg>
-      <div id="play-label">Play</div>
-    </div>
+    <!-- Scene 4 -->
+    <div class="txt" id="t4">The landscape has moved —</div>
+    <!-- Scene 5 -->
+    <div class="txt sub" id="t5">and it's not waiting for you.</div>
+    <!-- Scene 6 -->
+    <div class="txt" id="t6">Are you keeping up?</div>
   </div>
 
-  <script>
-    const canvas    = document.getElementById('c');
-    const ctx       = canvas.getContext('2d');
-    const stage     = document.getElementById('stage');
-    const texts     = {
-      t1: document.getElementById('t1'),
-      t2: document.getElementById('t2'),
-      t3: document.getElementById('t3'),
-      t4: document.getElementById('t4'),
-      t5: document.getElementById('t5'),
-    };
-    const timerFill = document.getElementById('timer-fill');
-    const playBtn   = document.getElementById('play-btn');
+  <div id="timer-bar"><div id="timer-fill"></div></div>
+  <div id="play-btn">
+    <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+      <circle cx="22" cy="22" r="21" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+      <polygon points="17,14 34,22 17,30" fill="rgba(255,255,255,0.7)"/>
+    </svg>
+    <div id="play-label">Play</div>
+  </div>
+</div>
 
-    // 1.5× speed: 25 s → ~16.67 s
-    const DURATION = Math.round(25000 / 1.5);
+<script>
+  const canvas    = document.getElementById('c');
+  const ctx       = canvas.getContext('2d');
+  const stage     = document.getElementById('stage');
+  const timerFill = document.getElementById('timer-fill');
+  const playBtn   = document.getElementById('play-btn');
+  const trioWrap  = document.getElementById('trio-wrap');
 
-    let W, H, cx, cy, particles = [], funnelPts = [];
-    let animId, startTime, playing = false;
+  // Individual text nodes
+  const texts = {
+    t1: document.getElementById('t1'),
+    t2: document.getElementById('t2'),
+    t4: document.getElementById('t4'),
+    t5: document.getElementById('t5'),
+    t6: document.getElementById('t6'),
+  };
 
-    // ✅ Cap DPR at 2 — beyond that the canvas is oversized and hurts mobile GPU
-    const DPR = Math.min(window.devicePixelRatio || 1, 2);
+  // ── Timing ──────────────────────────────────────────────────────────────────
+  // Total original timeline: 28 s, run at 1.5× → ~18.67 s
+  const SPEED    = 1.5;
+  const DURATION = Math.round(28000 / SPEED);
+  const T        = ms => Math.round(ms / SPEED);
 
-    /* ─── Resize ─── */
-    let resizeTimer;
-    function resize() {
-      const r = stage.getBoundingClientRect();
-      W = r.width;
-      H = r.height;
-      canvas.width  = Math.round(W * DPR);
-      canvas.height = Math.round(H * DPR);
-      // ✅ Single scale call matches DPR so all draw coords stay in CSS px
-      ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-      cx = W / 2;
-      cy = H / 2;
-      buildFunnel();
-      initParticles();
+  /*
+   * Scene map (original ms → T(ms) ≈ real ms):
+   *   0      – 3500   Scene 1  "The world has changed."         funnel fades in
+   *   3500   – 7500   Scene 2  "The marketing funnel…"          funnel intact, subtle wobble
+   *   7500   – 11500  Scene 3  trio lines + glitch start         funnel shakes
+   *   11500  – 15000  Scene 4  "The landscape has moved —"      heavy frag, funnel fading
+   *   15000  – 19000  Scene 5  "and it's not waiting…"          near-total scatter
+   *   19000  – 28000  Scene 6  "Are you lost?"                  full scatter, pulse glow
+   */
+
+  // ── Canvas & world state ────────────────────────────────────────────────────
+  let W, H, cx, cy;
+  let particles = [], funnelPts = [];
+  let animId, startTime, playing = false;
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  // ── Resize ──────────────────────────────────────────────────────────────────
+  let resizeTimer;
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cx = W / 2; cy = H / 2;
+    buildFunnel();
+    initParticles();
+  }
+  new ResizeObserver(() => { clearTimeout(resizeTimer); resizeTimer = setTimeout(resize, 60); }).observe(stage);
+  resize();
+
+  // ── Funnel geometry ─────────────────────────────────────────────────────────
+  function buildFunnel() {
+    funnelPts = [];
+    const topW = W * 0.38, botW = W * 0.07;
+    const topY = cy - H * 0.22, botY = cy + H * 0.22;
+    for (let i = 0; i <= 28; i++) {
+      const pct = i / 28;
+      const hw  = topW / 2 + (botW / 2 - topW / 2) * pct;
+      const y   = topY + (botY - topY) * pct;
+      funnelPts.push({ pct, hw, y, left: cx - hw, right: cx + hw });
+    }
+  }
+
+  // ── Particles ───────────────────────────────────────────────────────────────
+  function initParticles() {
+    particles = [];
+    for (let i = 0; i < 200; i++) {
+      const side  = Math.random() < 0.5 ? -1 : 1;
+      const pct   = Math.random();
+      const row   = funnelPts[Math.floor(pct * (funnelPts.length - 1))];
+      const baseX = side > 0 ? row.right : row.left;
+      const baseY = row.y;
+      // scatter targets spread wider for the "lost" ending
+      particles.push({
+        x: baseX, y: baseY, ox: baseX, oy: baseY,
+        alpha:  Math.random() * 0.65 + 0.2,
+        size:   Math.random() * 1.3 + 0.3,
+        driftX: (Math.random() - 0.5) * 130,
+        driftY: (Math.random() - 0.5) * 110,
+        phase:  Math.random() * Math.PI * 2,
+        side, pct,
+      });
+    }
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  function easeInOut(t) { return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2, 2)/2; }
+  function lerp(a, b, t) { return a + (b-a)*t; }
+
+  // ── Draw: funnel ─────────────────────────────────────────────────────────────
+  function drawFunnel(glitch, fragPct, alpha) {
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    const lc = funnelPts.length - 1;
+    for (let i = 0; i < lc; i++) {
+      const a = funnelPts[i], b = funnelPts[i+1];
+      const segA = 1 - Math.pow(i / lc, 1.5) * fragPct;
+      if (segA <= 0) continue;
+      const gx = glitch > 0 ? (Math.random()-0.5)*glitch*12 : 0;
+      const gy = glitch > 0 ? (Math.random()-0.5)*glitch*4  : 0;
+      ctx.beginPath();
+      ctx.moveTo(a.left+gx,  a.y+gy); ctx.lineTo(b.left+gx,  b.y+gy);
+      ctx.moveTo(a.right+gx, a.y+gy); ctx.lineTo(b.right+gx, b.y+gy);
+      const br = 0.55 + 0.3*(1 - i/lc);
+      const bv = Math.round(br*255);
+      const grad = ctx.createLinearGradient(0, a.y, 0, b.y);
+      grad.addColorStop(0, `rgba(${bv},${bv},${bv},${segA})`);
+      grad.addColorStop(1, `rgba(${bv},${bv},${bv},${segA*0.6})`);
+      ctx.strokeStyle = grad; ctx.lineWidth = 0.5; ctx.stroke();
+    }
+    for (let i = 0; i < funnelPts.length; i += 4) {
+      const row  = funnelPts[i];
+      const segA = (1 - Math.pow(i/funnelPts.length, 1.3)*fragPct) * 0.25;
+      if (segA <= 0) continue;
+      const gx = glitch > 0 ? (Math.random()-0.5)*glitch*8 : 0;
+      ctx.beginPath();
+      ctx.moveTo(row.left+gx, row.y); ctx.lineTo(row.right+gx, row.y);
+      ctx.strokeStyle = `rgba(200,200,200,${segA})`;
+      ctx.lineWidth = 0.4; ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ── Draw: glow ───────────────────────────────────────────────────────────────
+  function drawGlow(fragPct, elapsed) {
+    // ambient glow as funnel fragments
+    const gAlpha = Math.max(0, fragPct - 0.25);
+    if (gAlpha > 0) {
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, H*0.38);
+      g.addColorStop(0,   `rgba(160,150,200,${gAlpha*0.09})`);
+      g.addColorStop(0.5, `rgba(120,110,180,${gAlpha*0.04})`);
+      g.addColorStop(1,   'rgba(0,0,0,0)');
+      ctx.beginPath(); ctx.arc(cx, cy, H*0.38, 0, Math.PI*2);
+      ctx.fillStyle = g; ctx.fill();
     }
 
-    // ✅ Debounce resize to avoid thrashing during orientation change
-    new ResizeObserver(() => {
-      clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(resize, 60);
-    }).observe(stage);
+    // slow breathing pulse during "Are you lost?" scene (T19000–end)
+    const s19 = T(19000);
+    if (elapsed > s19) {
+      const progress = Math.min(1, (elapsed - s19) / T(5000));
+      const pulse    = Math.sin(elapsed * 0.0012) * 0.5 + 0.5;
+      const pAlpha   = easeInOut(progress) * pulse * 0.07;
+      const g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, W*0.55);
+      g2.addColorStop(0, `rgba(200,195,230,${pAlpha})`);
+      g2.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.beginPath(); ctx.arc(cx, cy, W*0.55, 0, Math.PI*2);
+      ctx.fillStyle = g2; ctx.fill();
+    }
+  }
 
-    resize();
+  // ── Draw: particles ──────────────────────────────────────────────────────────
+  function drawParticles(fragPct, elapsed) {
+    for (const p of particles) {
+      const drift = Math.min(1, Math.max(0, (fragPct - 0.08) / 0.72));
+      p.x = lerp(p.ox, p.ox + p.driftX*drift, easeInOut(Math.min(1, drift*1.4)));
+      p.y = lerp(p.oy, p.oy + p.driftY*drift, easeInOut(Math.min(1, drift*1.4)));
+      p.y += Math.sin(elapsed*0.0006 + p.phase) * 2.2 * drift;
+      const a     = p.alpha * (0.15 + 0.85*Math.min(1, fragPct*2));
+      const glowR = p.size * 3.8;
+      const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
+      g.addColorStop(0, `rgba(220,218,210,${a})`);
+      g.addColorStop(1, 'rgba(220,218,210,0)');
+      ctx.beginPath(); ctx.arc(p.x, p.y, glowR, 0, Math.PI*2);
+      ctx.fillStyle = g; ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.size*0.4, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(240,238,230,${a})`; ctx.fill();
+    }
+  }
 
-    /* ─── Funnel geometry ─── */
-    function buildFunnel() {
-      funnelPts = [];
-      const topW = W * 0.38, botW = W * 0.07;
-      const topY = cy - H * 0.22, botY = cy + H * 0.22;
-      const steps = 28;
-      for (let i = 0; i <= steps; i++) {
-        const pct = i / steps;
-        const hw  = topW / 2 + (botW / 2 - topW / 2) * pct;
-        const y   = topY + (botY - topY) * pct;
-        funnelPts.push({ pct, hw, y, left: cx - hw, right: cx + hw });
-      }
+  // ── Text helpers ─────────────────────────────────────────────────────────────
+  function hideAll() {
+    Object.values(texts).forEach(el => el.classList.remove('visible'));
+    trioWrap.classList.remove('visible');
+  }
+  function showOnly(id) {
+    hideAll();
+    if (id === 'trio') { trioWrap.classList.add('visible'); return; }
+    if (id && texts[id]) texts[id].classList.add('visible');
+  }
+
+  // trio: lines stagger in one by one with CSS delay via inline transition-delay
+  let trioShown = false;
+  function showTrio() {
+    if (trioShown) return;
+    trioShown = true;
+    hideAll();
+    const lines = trioWrap.querySelectorAll('.trio-line');
+    lines.forEach((l, i) => {
+      l.style.opacity = '0';
+      l.style.transition = `opacity 0.5s ease ${i * 0.32}s`;
+    });
+    trioWrap.classList.add('visible');
+    // force reflow then fade in
+    requestAnimationFrame(() => {
+      lines.forEach(l => { l.style.opacity = '1'; });
+    });
+  }
+
+  // ── Main loop ────────────────────────────────────────────────────────────────
+  function animate(ts) {
+    if (!startTime) startTime = ts;
+    const elapsed = ts - startTime;
+    timerFill.style.width = (Math.min(1, elapsed / DURATION) * 100) + '%';
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+
+    let glitch = 0, fragPct = 0, funnelAlpha = 1;
+
+    // ── Scene 1: 0 – 3500ms  "The world has changed." ──────────────────────
+    if (elapsed < T(3500)) {
+      funnelAlpha = Math.min(1, elapsed / T(900));
+      fragPct = 0; glitch = 0;
+      showOnly('t1');
+
+    // ── Scene 2: 3500 – 7500ms  "The marketing funnel is no longer linear." ─
+    } else if (elapsed < T(7500)) {
+      funnelAlpha = 1; fragPct = 0;
+      // subtle wave/wobble — low glitch, no real frag
+      const p2 = (elapsed - T(3500)) / T(4000);
+      glitch = Math.sin(p2 * Math.PI) * 0.12;
+      showOnly('t2');
+
+    // ── Scene 3: 7500 – 11500ms  trio lines, glitch kicks in ─────────────────
+    } else if (elapsed < T(11500)) {
+      funnelAlpha = 1;
+      const p3 = (elapsed - T(7500)) / T(4000);
+      glitch  = easeInOut(p3) * 0.65;
+      fragPct = easeInOut(p3) * 0.25;
+      showTrio();
+
+    // ── Scene 4: 11500 – 15000ms  "The landscape has moved —" ────────────────
+    } else if (elapsed < T(15000)) {
+      const p4 = (elapsed - T(11500)) / T(3500);
+      glitch      = 0.65 + p4 * 0.35;
+      fragPct     = 0.25 + p4 * 0.6;
+      funnelAlpha = 1 - p4 * 0.65;
+      showOnly('t4');
+
+    // ── Scene 5: 15000 – 19000ms  "and it's not waiting for you." ────────────
+    } else if (elapsed < T(19000)) {
+      const p5 = (elapsed - T(15000)) / T(4000);
+      glitch      = Math.max(0, 0.5 - p5 * 0.8);
+      fragPct     = 0.85 + p5 * 0.12;
+      funnelAlpha = Math.max(0, 0.35 - p5 * 0.35);
+      showOnly('t5');
+
+    // ── Scene 6: 19000ms+  "Are you lost?" ───────────────────────────────────
+    } else {
+      fragPct = 1; funnelAlpha = 0; glitch = 0;
+      showOnly('t6');
     }
 
-    /* ─── Particles ─── */
-    function initParticles() {
-      particles = [];
-      for (let i = 0; i < 180; i++) {
-        const side = Math.random() < 0.5 ? -1 : 1;
-        const pct  = Math.random();
-        const row  = funnelPts[Math.floor(pct * (funnelPts.length - 1))];
-        const baseX = side > 0 ? row.right : row.left;
-        const baseY = row.y;
-        particles.push({
-          x: baseX, y: baseY, ox: baseX, oy: baseY,
-          alpha: Math.random() * 0.6 + 0.2,
-          size:  Math.random() * 1.2 + 0.3,
-          driftX: (Math.random() - 0.5) * 90,
-          driftY: (Math.random() - 0.5) * 70,
-          phase: Math.random() * Math.PI * 2,
-          side, pct,
-        });
-      }
-    }
+    drawGlow(fragPct, elapsed);
+    drawFunnel(glitch, fragPct, funnelAlpha);
+    drawParticles(fragPct, elapsed);
 
-    /* ─── Helpers ─── */
-    function easeInOut(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
-    function lerp(a, b, t) { return a + (b - a) * t; }
-    const T = ms => Math.round(ms / 1.5);   // timestamp scaler
-
-    /* ─── Draw: funnel ─── */
-    function drawFunnel(glitch, fragPct, alpha) {
-      if (alpha <= 0) return;
+    // scanline glitch slice
+    if (glitch > 0.1 && Math.random() < glitch * 0.35) {
+      const sy    = Math.random() * H;
+      const sh    = Math.random() * 3 + 1;
+      const shift = (Math.random() - 0.5) * glitch * 20;
       ctx.save();
-      ctx.globalAlpha = alpha;
-      const lineCount = funnelPts.length - 1;
-      for (let i = 0; i < lineCount; i++) {
-        const a = funnelPts[i], b = funnelPts[i + 1];
-        const segAlpha = 1 - Math.pow(i / lineCount, 1.5) * fragPct;
-        if (segAlpha <= 0) continue;
-        const gx = glitch > 0 ? (Math.random() - 0.5) * glitch * 12 : 0;
-        const gy = glitch > 0 ? (Math.random() - 0.5) * glitch * 4  : 0;
-        ctx.beginPath();
-        ctx.moveTo(a.left  + gx, a.y + gy); ctx.lineTo(b.left  + gx, b.y + gy);
-        ctx.moveTo(a.right + gx, a.y + gy); ctx.lineTo(b.right + gx, b.y + gy);
-        const br = 0.55 + 0.3 * (1 - i / lineCount);
-        const bv = Math.round(br * 255);
-        const grad = ctx.createLinearGradient(0, a.y, 0, b.y);
-        grad.addColorStop(0, `rgba(${bv},${bv},${bv},${segAlpha})`);
-        grad.addColorStop(1, `rgba(${bv},${bv},${bv},${segAlpha * 0.6})`);
-        ctx.strokeStyle = grad; ctx.lineWidth = 0.5; ctx.stroke();
-      }
-      for (let i = 0; i < funnelPts.length; i += 4) {
-        const row = funnelPts[i];
-        const segAlpha = (1 - Math.pow(i / funnelPts.length, 1.3) * fragPct) * 0.25;
-        if (segAlpha <= 0) continue;
-        const gx = glitch > 0 ? (Math.random() - 0.5) * glitch * 8 : 0;
-        ctx.beginPath();
-        ctx.moveTo(row.left + gx, row.y); ctx.lineTo(row.right + gx, row.y);
-        ctx.strokeStyle = `rgba(200,200,200,${segAlpha})`;
-        ctx.lineWidth = 0.4; ctx.stroke();
-      }
+      ctx.globalAlpha = glitch * 0.15;
+      try {
+        const imgData = ctx.getImageData(0, Math.round(sy * DPR), Math.round(W * DPR), Math.max(1, Math.round(sh * DPR)));
+        ctx.putImageData(imgData, shift, sy);
+      } catch(e) { /* safe guard for edge-pixel out-of-bounds */ }
       ctx.restore();
     }
 
-    /* ─── Draw: glow ─── */
-    function drawGlow(fragPct, phase, elapsed) {
-      const r = H * 0.38;
-      const gAlpha = Math.max(0, fragPct - 0.3) * 1.0;
-      if (gAlpha > 0) {
-        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r * 0.9);
-        g.addColorStop(0,   `rgba(160,150,200,${gAlpha * 0.08})`);
-        g.addColorStop(0.5, `rgba(120,110,180,${gAlpha * 0.04})`);
-        g.addColorStop(1,   'rgba(0,0,0,0)');
-        ctx.beginPath(); ctx.arc(cx, cy, r * 0.9, 0, Math.PI * 2);
-        ctx.fillStyle = g; ctx.fill();
-      }
-      const s5 = T(5000), s8 = T(8500);
-      if (elapsed > s5 && elapsed < s8) {
-        const pulse = Math.sin((elapsed - s5) / (s8 - s5) * Math.PI) * 0.5;
-        const g2 = ctx.createRadialGradient(cx, cy - H * 0.04, 0, cx, cy - H * 0.04, W * 0.3);
-        g2.addColorStop(0, `rgba(255,255,255,${pulse * 0.06})`);
-        g2.addColorStop(1, 'rgba(0,0,0,0)');
-        ctx.beginPath(); ctx.arc(cx, cy - H * 0.04, W * 0.3, 0, Math.PI * 2);
-        ctx.fillStyle = g2; ctx.fill();
-      }
-    }
-
-    /* ─── Draw: particles ─── */
-    function drawParticles(fragPct, elapsed) {
-      for (const p of particles) {
-        const drift = Math.min(1, Math.max(0, (fragPct - 0.1) / 0.7));
-        const tx = p.ox + p.driftX * drift;
-        const ty = p.oy + p.driftY * drift;
-        p.x = lerp(p.ox, tx, easeInOut(Math.min(1, drift * 1.5)));
-        p.y = lerp(p.oy, ty, easeInOut(Math.min(1, drift * 1.5)));
-        p.y += Math.sin(elapsed * 0.0006 + p.phase) * 2 * drift;
-        const a     = p.alpha * (0.2 + 0.8 * Math.min(1, fragPct * 2));
-        const glowR = p.size * 3.5;
-        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
-        g.addColorStop(0, `rgba(220,218,210,${a})`);
-        g.addColorStop(1, 'rgba(220,218,210,0)');
-        ctx.beginPath(); ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
-        ctx.fillStyle = g; ctx.fill();
-        ctx.beginPath(); ctx.arc(p.x, p.y, p.size * 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(240,238,230,${a})`; ctx.fill();
-      }
-    }
-
-    /* ─── Text visibility ─── */
-    function setTextVisibility(id) {
-      Object.values(texts).forEach(el => el.classList.remove('visible'));
-      if (id && texts[id]) texts[id].classList.add('visible');
-    }
-
-    /* ─── Animation loop ─── */
-    function animate(ts) {
-      if (!startTime) startTime = ts;
-      const elapsed = ts - startTime;
-      const phase   = Math.min(1, elapsed / DURATION);
-      timerFill.style.width = (phase * 100) + '%';
-
-      ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
-
-      let glitch = 0, fragPct = 0, funnelAlpha = 1;
-
-      if (elapsed < T(4000)) {
-        glitch = 0; fragPct = 0;
-        funnelAlpha = Math.min(1, elapsed / T(800));
-        setTextVisibility('t1');
-      } else if (elapsed < T(8500)) {
-        glitch = 0; fragPct = 0; funnelAlpha = 1;
-        setTextVisibility('t2');
-      } else if (elapsed < T(12000)) {
-        const p2 = (elapsed - T(8500)) / (T(12000) - T(8500));
-        glitch      = easeInOut(p2) * 0.6;
-        fragPct     = easeInOut(p2) * 0.2;
-        funnelAlpha = 1;
-        setTextVisibility(null);
-      } else if (elapsed < T(15500)) {
-        const p3 = (elapsed - T(12000)) / (T(15500) - T(12000));
-        glitch      = 0.6 + p3 * 0.4;
-        fragPct     = 0.2 + p3 * 0.7;
-        funnelAlpha = 1 - p3 * 0.6;
-        setTextVisibility('t3');
-      } else if (elapsed < T(20000)) {
-        const p4 = (elapsed - T(15500)) / (T(20000) - T(15500));
-        glitch      = Math.max(0, 0.4 - p4 * 0.8);
-        fragPct     = 0.9 + p4 * 0.1;
-        funnelAlpha = Math.max(0, 0.4 - p4 * 0.4);
-        setTextVisibility('t4');
-      } else {
-        fragPct = 1; funnelAlpha = 0; glitch = 0;
-        setTextVisibility('t5');
-      }
-
-      drawGlow(fragPct, phase, elapsed);
-      drawFunnel(glitch, fragPct, funnelAlpha);
-      drawParticles(fragPct, elapsed);
-
-      // Glitch scanline effect
-      if (glitch > 0.1 && Math.random() < glitch * 0.35) {
-        const sy    = Math.random() * H;
-        const sh    = Math.random() * 3 + 1;
-        const shift = (Math.random() - 0.5) * glitch * 18;
-        ctx.save();
-        ctx.globalAlpha = glitch * 0.15;
-        // ✅ Scale sy/sh by DPR for getImageData (operates in physical pixels)
-        const imgData = ctx.getImageData(0, Math.round(sy * DPR), Math.round(W * DPR), Math.round(sh * DPR));
-        ctx.putImageData(imgData, shift, sy);
-        ctx.restore();
-      }
-
-      if (elapsed < DURATION) {
-        animId = requestAnimationFrame(animate);
-      } else {
-        setTextVisibility('t5');
-        timerFill.style.width = '100%';
-        setTimeout(() => { playBtn.style.display = 'flex'; playing = false; }, 600);
-      }
-    }
-
-    /* ─── Start / replay ─── */
-    function startAnim() {
-      if (playing) return;
-      playing   = true;
-      startTime = null;
-      timerFill.style.width = '0%';
-      Object.values(texts).forEach(el => el.classList.remove('visible'));
-      cancelAnimationFrame(animId);
-      initParticles();
+    if (elapsed < DURATION) {
       animId = requestAnimationFrame(animate);
+    } else {
+      showOnly('t6');
+      timerFill.style.width = '100%';
+      setTimeout(() => { playBtn.style.display = 'flex'; playing = false; }, 800);
     }
+  }
 
-    // ✅ Both click (desktop) and touchstart (mobile) trigger play
-    ['click', 'touchstart'].forEach(evt =>
-      playBtn.addEventListener(evt, e => {
-        e.preventDefault();          // prevent ghost click on touch
-        playBtn.style.display = 'none';
-        startAnim();
-      }, { passive: false })
-    );
-  </script>
+  // ── Start / replay ───────────────────────────────────────────────────────────
+  function startAnim() {
+    if (playing) return;
+    playing    = true;
+    startTime  = null;
+    trioShown  = false;
+    timerFill.style.width = '0%';
+    hideAll();
+    // reset trio line opacities
+    trioWrap.querySelectorAll('.trio-line').forEach(l => {
+      l.style.opacity    = '0';
+      l.style.transition = '';
+    });
+    cancelAnimationFrame(animId);
+    initParticles();
+    animId = requestAnimationFrame(animate);
+  }
+
+  ['click', 'touchstart'].forEach(evt =>
+    playBtn.addEventListener(evt, e => {
+      e.preventDefault();
+      playBtn.style.display = 'none';
+      startAnim();
+    }, { passive: false })
+  );
+</script>
 </body>
 </html>
