@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Piquant Ideas</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap');
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      display: flex; align-items: center; justify-content: center;
+      overscroll-behavior: none;
+      overflow: hidden;
+      padding: env(safe-area-inset-top,0px)   env(safe-area-inset-right,0px)
+               env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
+    }
+
+    #stage {
+      --stage-w: min(420px, min(100vw, calc(100dvh * 9 / 16)));
+      width: var(--stage-w);
+      aspect-ratio: 9 / 16;
+      background: #000;
+      position: relative;
+      overflow: hidden;
+      font-family: 'Playfair Display', serif;
+      will-change: transform;
+      container-type: inline-size;
+    }
+    @supports not (height: 100dvh) {
+      #stage { --stage-w: min(420px, min(100vw, calc(100vh * 9 / 16))); }
+    }
+
+    canvas {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      image-rendering: crisp-edges;
+      display: block;
+    }
+
+    /* ── Text layer ── */
+    #text-layer {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; pointer-events: none;
+      flex-direction: column;
+    }
+
+    .txt {
+      color: #f0ece4;
+      font-family: 'Playfair Display', serif;
+      font-weight: 400;
+      font-size: clamp(13px, 5.2cqi, 19px);
+      letter-spacing: 0.06em;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.9s ease, visibility 0s linear 0.9s;
+      line-height: 1.7;
+      max-width: 80%;
+      font-style: italic;
+      -webkit-text-size-adjust: 100%;
+      text-size-adjust: 100%;
+      position: absolute;
+    }
+    .txt.visible {
+      opacity: 1; visibility: visible;
+      transition: opacity 0.9s ease, visibility 0s linear 0s;
+    }
+
+    /* Pause / question line — non-italic, spaced */
+    #t2 {
+      font-style: normal;
+      font-weight: 300;
+      font-size: clamp(12px, 4.8cqi, 17px);
+      letter-spacing: 0.1em;
+      color: rgba(240,236,228,0.85);
+    }
+
+    /* Brand intro — slightly larger */
+    #t3 {
+      font-size: clamp(12px, 4.6cqi, 17px);
+      line-height: 1.75;
+    }
+
+    /* "Built for where…" — small spaced sub */
+    #t5 {
+      font-style: normal;
+      font-weight: 300;
+      font-size: clamp(9px, 3.2cqi, 12px);
+      letter-spacing: 0.22em;
+      color: rgba(240,236,228,0.52);
+      line-height: 1.9;
+    }
+
+    /* Final CTA — warmest, most confident */
+    #t7 {
+      font-size: clamp(13px, 5.4cqi, 20px);
+      font-weight: 400;
+      font-style: italic;
+      color: #f5f0e8;
+      transition: opacity 1.6s ease, visibility 0s linear 0s;
+      letter-spacing: 0.05em;
+    }
+    #t7.visible {
+      transition: opacity 1.6s ease, visibility 0s linear 0s;
+    }
+
+    /* Brand name lockup — sits below canvas centre in S3+ */
+    #brand-lockup {
+      position: absolute;
+      bottom: 22%;
+      left: 50%; transform: translateX(-50%);
+      text-align: center;
+      pointer-events: none;
+      opacity: 0; visibility: hidden;
+      transition: opacity 1.1s ease, visibility 0s linear 1.1s;
+      white-space: nowrap;
+    }
+    #brand-lockup.visible {
+      opacity: 1; visibility: visible;
+      transition: opacity 1.1s ease, visibility 0s linear 0s;
+    }
+    #brand-name {
+      font-family: 'Cormorant Garamond', serif;
+      font-weight: 300;
+      font-style: normal;
+      font-size: clamp(11px, 3.8cqi, 16px);
+      letter-spacing: 0.38em;
+      color: rgba(240,235,220,0.55);
+      text-transform: uppercase;
+    }
+    #brand-rule {
+      width: 100%;
+      height: 1px;
+      margin: 6px 0 0;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(220,215,200,0.3) 30%,
+        rgba(220,215,200,0.3) 70%,
+        transparent 100%
+      );
+    }
+
+    /* ── Timer ── */
+    #timer-bar {
+      position: absolute; bottom: 18px; left: 50%;
+      transform: translateX(-50%);
+      width: 60%; height: 1px;
+      background: rgba(255,255,255,0.08);
+    }
+    #timer-fill {
+      height: 100%; background: rgba(255,255,255,0.25); width: 0%;
+      transition: width 0.1s linear;
+    }
+
+    /* ── Play button ── */
+    #play-btn {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; background: rgba(0,0,0,0.6); z-index: 10;
+      flex-direction: column; gap: 12px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+    #play-btn svg { opacity: 0.7; }
+    #play-label {
+      color: rgba(255,255,255,0.4);
+      font-size: 10px; letter-spacing: 0.25em;
+      font-family: 'Playfair Display', serif; font-style: italic;
+    }
+  </style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="c"></canvas>
+
+  <div id="text-layer">
+    <div class="txt" id="t1">Marketing has evolved.</div>
+    <div class="txt" id="t2">The question is —<br>has your thinking?</div>
+    <div class="txt" id="t3">At Piquant Ideas, we bring<br>fresh insight, bold strategy<br>and ideas that move people.</div>
+    <div class="txt" id="t4">Built for where marketing<br>is going —<br>not where it's been.</div>
+    <div class="txt" id="t5">BUILT FOR WHERE MARKETING IS GOING<br>NOT WHERE IT'S BEEN</div>
+    <div class="txt" id="t6">If you're ready<br>to think differently —</div>
+    <div class="txt" id="t7">we're ready to build<br>that with you.</div>
+  </div>
+
+  <!-- Brand name lockup, revealed in S3 -->
+  <div id="brand-lockup">
+    <div id="brand-name">Piquant Ideas</div>
+    <div id="brand-rule"></div>
+  </div>
+
+  <div id="timer-bar"><div id="timer-fill"></div></div>
+
+  <div id="play-btn">
+    <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+      <circle cx="22" cy="22" r="21" stroke="rgba(255,255,255,0.3)" stroke-width="0.5"/>
+      <polygon points="17,14 34,22 17,30" fill="rgba(255,255,255,0.7)"/>
+    </svg>
+    <div id="play-label">Play</div>
+  </div>
+</div>
+
+<script>
+  /* ── Elements ── */
+  const canvas      = document.getElementById('c');
+  const ctx         = canvas.getContext('2d');
+  const stage       = document.getElementById('stage');
+  const timerFill   = document.getElementById('timer-fill');
+  const playBtn     = document.getElementById('play-btn');
+  const brandLockup = document.getElementById('brand-lockup');
+
+  const txts = {};
+  ['t1','t2','t3','t4','t5','t6','t7'].forEach(id => { txts[id] = document.getElementById(id); });
+
+  /* ── Timing ──
+   *  27 000ms raw / 1.35 = 20 000ms real
+   *  2s extra moved from S1/S2/S6 into S3, S4, S5 for readability.
+   *
+   *  Scene  raw ms         real ms        copy
+   *  S1     0 – 3000       0 – 2222       "Marketing has evolved."
+   *  S2     3000 – 6000    2222 – 4444    "The question is — has your thinking?"
+   *  S3     6000 – 11700   4444 – 8667    "At Piquant Ideas…ideas that move people."
+   *  S4     11700 – 16200  8667 – 12000   "Built for where marketing is going…"
+   *  S5     16200 – 20200  12000 – 14963  "If you're ready to think differently —"
+   *  S6     20200 – 27000  14963 – 20000  "we're ready to build that with you."
+   */
+  const SPEED    = 1.35; // 27 000ms / 1.35 = 20 000ms exactly
+  const DURATION = Math.round(27000 / SPEED);
+  const T        = ms => Math.round(ms / SPEED);
+
+  /* ── State ── */
+  let W, H, cx, cy;
+  let animId, startTime, playing = false;
+  const DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  /* ── Scene geometry (initialised fresh each play) ── */
+  let particles  = []; // organising particles for S1
+  let markLines  = []; // brand mark line segments
+  let orbitDots  = []; // orbiting particles for S3–S4
+  let timelinePts= []; // past/future line points for S4
+  let brandShown = false;
+
+  /* ── Deterministic RNG ── */
+  function rng(s) {
+    const x = Math.sin(s * 127.1 + 311.7) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  /* ── Resize ── */
+  let resizeTimer;
+  function resize() {
+    const r = stage.getBoundingClientRect();
+    W = r.width; H = r.height;
+    canvas.width  = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cx = W / 2; cy = H / 2;
+  }
+  new ResizeObserver(() => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(resize, 60);
+  }).observe(stage);
+  resize();
+
+  /* ── Helpers ── */
+  function easeInOut(t) { return t < 0.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2; }
+  function easeOut(t)   { return 1 - Math.pow(1-t,3); }
+  function easeIn(t)    { return t*t*t; }
+  function lerp(a,b,t)  { return a+(b-a)*t; }
+  function clamp(v,lo,hi){ return Math.max(lo,Math.min(hi,v)); }
+
+  /* ════════════════════════════════════════
+   *  INIT — called fresh on every replay
+   *  Always runs after resize() so W/H valid
+   * ════════════════════════════════════════ */
+  function initScene() {
+    brandShown = false;
+
+    /* S1 particles — start scattered, drift toward order */
+    particles = [];
+    for (let i = 0; i < 120; i++) {
+      // chaotic start position
+      const startX = rng(i*7)  * W;
+      const startY = rng(i*11) * H;
+      // ordered target: loose oval around centre
+      const angle  = rng(i*3)  * Math.PI * 2;
+      const dist   = rng(i*5)  * Math.min(W,H) * 0.3 + Math.min(W,H) * 0.04;
+      const endX   = cx + Math.cos(angle) * dist;
+      const endY   = cy + Math.sin(angle) * dist * 0.65;
+      particles.push({
+        sx: startX, sy: startY,
+        ex: endX,   ey: endY,
+        x: startX,  y: startY,
+        alpha: rng(i*13) * 0.5 + 0.25,
+        size:  rng(i*17) * 1.2 + 0.4,
+        phase: rng(i*19) * Math.PI * 2,
+      });
+    }
+
+    /* Brand mark: a precise "P·I" diamond/lozenge mark
+     * Made of 8 line segments that draw in sequentially.
+     * Sits at vertical centre of canvas, slightly above mid. */
+    const mk = cy - H * 0.06; // mark centre Y
+    const mw = Math.min(W,H) * 0.16; // half-width
+    const mh = Math.min(W,H) * 0.22; // half-height
+    // Diamond outline: top → right → bottom → left → top
+    markLines = [
+      // outer diamond
+      { x1: cx,     y1: mk-mh, x2: cx+mw, y2: mk,    delay: 0.00 },
+      { x1: cx+mw,  y1: mk,    x2: cx,    y2: mk+mh,  delay: 0.12 },
+      { x1: cx,     y1: mk+mh, x2: cx-mw, y2: mk,    delay: 0.24 },
+      { x1: cx-mw,  y1: mk,    x2: cx,    y2: mk-mh,  delay: 0.36 },
+      // inner diamond (at 42% scale)
+      { x1: cx,          y1: mk-mh*0.42, x2: cx+mw*0.42, y2: mk,         delay: 0.48 },
+      { x1: cx+mw*0.42,  y1: mk,         x2: cx,          y2: mk+mh*0.42, delay: 0.56 },
+      { x1: cx,          y1: mk+mh*0.42, x2: cx-mw*0.42, y2: mk,         delay: 0.64 },
+      { x1: cx-mw*0.42,  y1: mk,         x2: cx,          y2: mk-mh*0.42, delay: 0.72 },
+      // cross lines (connecting inner to outer at cardinal points)
+      { x1: cx,     y1: mk-mh,    x2: cx,     y2: mk-mh*0.42, delay: 0.80 },
+      { x1: cx+mw,  y1: mk,       x2: cx+mw*0.42, y2: mk,     delay: 0.84 },
+      { x1: cx,     y1: mk+mh,    x2: cx,     y2: mk+mh*0.42, delay: 0.88 },
+      { x1: cx-mw,  y1: mk,       x2: cx-mw*0.42, y2: mk,     delay: 0.92 },
+    ];
+
+    /* Orbit dots — circle the mark during S3–S5 */
+    orbitDots = [];
+    for (let i = 0; i < 18; i++) {
+      const orbitR = Math.min(W,H) * (0.24 + rng(i*7) * 0.14);
+      orbitDots.push({
+        angle:  rng(i*3)  * Math.PI * 2,
+        speed:  (rng(i*5) * 0.6 + 0.2) * (rng(i*11) < 0.5 ? 1 : -1) * 0.0004,
+        r:      orbitR,
+        ry:     orbitR * 0.55, // elliptical
+        size:   rng(i*13) * 1.1 + 0.4,
+        alpha:  rng(i*17) * 0.45 + 0.2,
+        phase:  rng(i*19) * Math.PI * 2,
+      });
+    }
+
+    /* Timeline points for S4 — two horizontal lines */
+    timelinePts = { pastY: cy + H*0.12, futureY: cy - H*0.12 };
+  }
+
+  /* ════════════════════════════════════════
+   *  DRAW HELPERS
+   * ════════════════════════════════════════ */
+
+  /* ── Ambient radial glow at centre ── */
+  function drawGlow(radius, r, g, b, alpha) {
+    if (alpha < 0.004) return;
+    const gl = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    gl.addColorStop(0,   `rgba(${r},${g},${b},${alpha})`);
+    gl.addColorStop(0.45,`rgba(${r},${g},${b},${alpha * 0.3})`);
+    gl.addColorStop(1,   `rgba(${r},${g},${b},0)`);
+    ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI*2);
+    ctx.fillStyle = gl; ctx.fill();
+  }
+
+  /* ── Scattered organising particles (S1–S2) ── */
+  function drawParticles(orderPct, globalAlpha) {
+    if (globalAlpha < 0.004) return;
+    const ease = easeInOut(orderPct);
+    particles.forEach((p, i) => {
+      p.x = lerp(p.sx, p.ex, ease);
+      p.y = lerp(p.sy, p.ey, ease);
+      // subtle float
+      const floatY = Math.sin(Date.now() * 0.001 * 0.4 + p.phase) * 3 * (1 - ease);
+      const a = p.alpha * globalAlpha;
+      if (a < 0.005) return;
+      const gr = ctx.createRadialGradient(p.x, p.y+floatY, 0, p.x, p.y+floatY, p.size*3.5);
+      gr.addColorStop(0, `rgba(210,205,225,${a})`);
+      gr.addColorStop(1, 'rgba(210,205,225,0)');
+      ctx.beginPath(); ctx.arc(p.x, p.y+floatY, p.size*3.5, 0, Math.PI*2);
+      ctx.fillStyle = gr; ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x, p.y+floatY, p.size*0.5, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(225,220,240,${a})`; ctx.fill();
+    });
+  }
+
+  /* ── Cursor blink line (S2 pause moment) ── */
+  function drawCursor(elapsed, alpha) {
+    if (alpha < 0.004) return;
+    const blink   = Math.floor(elapsed * 0.002) % 2 === 0 ? 1 : 0;
+    const cursorA = alpha * (0.3 + blink * 0.5);
+    const cursorX = cx + W * 0.06;
+    const cursorY = cy + H * 0.09;
+    ctx.beginPath();
+    ctx.moveTo(cursorX, cursorY - H*0.018);
+    ctx.lineTo(cursorX, cursorY + H*0.018);
+    ctx.strokeStyle = `rgba(240,235,215,${cursorA})`;
+    ctx.lineWidth   = 1.2;
+    ctx.stroke();
+  }
+
+  /* ── Brand mark assembles line by line ── */
+  function drawMark(progress, glowAlpha) {
+    if (progress < 0.01 && glowAlpha < 0.004) return;
+
+    const markCY = cy - H * 0.06;
+
+    // Glow behind mark
+    if (glowAlpha > 0.004) {
+      const mgl = ctx.createRadialGradient(cx, markCY, 0, cx, markCY, Math.min(W,H)*0.28);
+      mgl.addColorStop(0,   `rgba(220,215,240,${glowAlpha * 0.18})`);
+      mgl.addColorStop(0.4, `rgba(195,190,225,${glowAlpha * 0.07})`);
+      mgl.addColorStop(1,   'rgba(0,0,0,0)');
+      ctx.beginPath(); ctx.arc(cx, markCY, Math.min(W,H)*0.28, 0, Math.PI*2);
+      ctx.fillStyle = mgl; ctx.fill();
+    }
+
+    if (progress < 0.01) return;
+
+    // Draw each line segment as it becomes available
+    markLines.forEach(seg => {
+      const segProgress = clamp((progress - seg.delay) / 0.1, 0, 1);
+      if (segProgress <= 0) return;
+      const t  = easeOut(segProgress);
+      const x2 = lerp(seg.x1, seg.x2, t);
+      const y2 = lerp(seg.y1, seg.y2, t);
+      // brightness varies: outer lines brighter, connectors dimmer
+      const bright = seg.delay < 0.48 ? 0.75 : seg.delay < 0.80 ? 0.55 : 0.38;
+      ctx.beginPath(); ctx.moveTo(seg.x1, seg.y1); ctx.lineTo(x2, y2);
+      ctx.strokeStyle = `rgba(220,215,235,${bright * clamp(progress*3, 0, 1)})`;
+      ctx.lineWidth = seg.delay < 0.48 ? 0.9 : 0.55;
+      ctx.stroke();
+    });
+  }
+
+  /* ── Orbiting particles around mark (S3–S5) ── */
+  function drawOrbit(elapsed, alpha, markCY) {
+    if (alpha < 0.004) return;
+    orbitDots.forEach((d, i) => {
+      const a     = d.angle + elapsed * d.speed;
+      const ox    = cx    + Math.cos(a) * d.r;
+      const oy    = markCY + Math.sin(a) * d.ry;
+      const pulse = (Math.sin(elapsed * 0.001 * 0.7 + d.phase) * 0.4 + 0.6);
+      const da    = d.alpha * alpha * pulse;
+      if (da < 0.005) return;
+      const gr = ctx.createRadialGradient(ox, oy, 0, ox, oy, d.size*3.5);
+      gr.addColorStop(0, `rgba(210,205,235,${da})`);
+      gr.addColorStop(1, 'rgba(210,205,235,0)');
+      ctx.beginPath(); ctx.arc(ox, oy, d.size*3.5, 0, Math.PI*2);
+      ctx.fillStyle = gr; ctx.fill();
+      ctx.beginPath(); ctx.arc(ox, oy, d.size*0.5, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(230,225,245,${da})`; ctx.fill();
+    });
+  }
+
+  /* ── Past / future timeline lines (S4) ── */
+  function drawTimeline(elapsed, alpha, forwardPct) {
+    if (alpha < 0.004) return;
+    const { pastY, futureY } = timelinePts;
+    const lineW = W * 0.72;
+
+    // PAST line — full width, fades out rightward, dims as time passes
+    const pastAlpha = alpha * lerp(0.55, 0.12, forwardPct);
+    if (pastAlpha > 0.004) {
+      const pg = ctx.createLinearGradient(cx - lineW/2, 0, cx + lineW/2, 0);
+      pg.addColorStop(0,    'rgba(160,155,175,0)');
+      pg.addColorStop(0.15, `rgba(160,155,175,${pastAlpha})`);
+      pg.addColorStop(0.7,  `rgba(160,155,175,${pastAlpha * 0.4})`);
+      pg.addColorStop(1,    'rgba(160,155,175,0)');
+      ctx.beginPath();
+      ctx.moveTo(cx - lineW/2, pastY); ctx.lineTo(cx + lineW/2, pastY);
+      ctx.strokeStyle = pg; ctx.lineWidth = 0.5; ctx.stroke();
+      // PAST label
+      ctx.fillStyle = `rgba(160,155,175,${pastAlpha * 0.7})`;
+      ctx.font = `300 ${clamp(W*0.02, 6, 9)}px 'Playfair Display', serif`;
+      ctx.textAlign = 'left'; ctx.letterSpacing = '0.2em';
+      ctx.fillText('PAST', cx - lineW/2 + 4, pastY - 5);
+      ctx.letterSpacing = '0';
+    }
+
+    // FUTURE line — draws in from left, bright and warm
+    const futureLen  = lineW * easeOut(forwardPct);
+    const futureAlpha= alpha * lerp(0.3, 0.85, forwardPct);
+    if (futureAlpha > 0.004 && futureLen > 1) {
+      const fg = ctx.createLinearGradient(cx - lineW/2, 0, cx - lineW/2 + futureLen, 0);
+      fg.addColorStop(0,   'rgba(235,225,200,0)');
+      fg.addColorStop(0.05,`rgba(235,225,200,${futureAlpha})`);
+      fg.addColorStop(0.85,`rgba(235,225,200,${futureAlpha})`);
+      fg.addColorStop(1,   'rgba(235,225,200,0)');
+      ctx.beginPath();
+      ctx.moveTo(cx - lineW/2, futureY);
+      ctx.lineTo(cx - lineW/2 + futureLen, futureY);
+      ctx.strokeStyle = fg; ctx.lineWidth = 0.9; ctx.stroke();
+      // FUTURE label
+      ctx.fillStyle = `rgba(235,225,200,${futureAlpha * 0.7})`;
+      ctx.font = `300 ${clamp(W*0.02, 6, 9)}px 'Playfair Display', serif`;
+      ctx.textAlign = 'left'; ctx.letterSpacing = '0.2em';
+      ctx.fillText('FUTURE', cx - lineW/2 + 4, futureY - 5);
+      ctx.letterSpacing = '0';
+    }
+
+    // Vertical connector between the two at the "now" point
+    const nowX    = cx - lineW/2 + futureLen;
+    const connAlpha = alpha * clamp(forwardPct * 2, 0, 1) * 0.4;
+    if (connAlpha > 0.004) {
+      ctx.beginPath();
+      ctx.moveTo(nowX, futureY); ctx.lineTo(nowX, pastY);
+      ctx.strokeStyle = `rgba(200,195,215,${connAlpha})`;
+      ctx.lineWidth = 0.4; ctx.stroke();
+    }
+    ctx.textAlign = 'left';
+  }
+
+  /* ── Warm brand glow (S5–S6) ── */
+  function drawBrandGlow(elapsed, alpha, markCY) {
+    if (alpha < 0.004) return;
+    const pulse = Math.sin(elapsed * 0.0014) * 0.35 + 0.65;
+    const r     = Math.min(W,H) * 0.35 * pulse;
+    const gl    = ctx.createRadialGradient(cx, markCY, 0, cx, markCY, r);
+    gl.addColorStop(0,   `rgba(245,235,210,${alpha * 0.14})`);
+    gl.addColorStop(0.35,`rgba(230,215,185,${alpha * 0.06})`);
+    gl.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.arc(cx, markCY, r, 0, Math.PI*2);
+    ctx.fillStyle = gl; ctx.fill();
+  }
+
+  /* ── Final full-blaze glow (S6) ── */
+  function drawFinalGlow(elapsed, alpha, markCY) {
+    if (alpha < 0.004) return;
+    const pulse  = Math.sin(elapsed * 0.0011) * 0.3 + 0.7;
+    const r1     = Math.min(W,H) * 0.45 * (0.9 + pulse * 0.1);
+    const r2     = Math.min(W,H) * 0.7;
+
+    // Inner warm
+    const g1 = ctx.createRadialGradient(cx, markCY, 0, cx, markCY, r1);
+    g1.addColorStop(0,   `rgba(250,240,215,${alpha * 0.22})`);
+    g1.addColorStop(0.3, `rgba(235,220,190,${alpha * 0.1})`);
+    g1.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.arc(cx, markCY, r1, 0, Math.PI*2);
+    ctx.fillStyle = g1; ctx.fill();
+
+    // Outer ambient
+    const g2 = ctx.createRadialGradient(cx, markCY, 0, cx, markCY, r2);
+    g2.addColorStop(0,   `rgba(215,205,240,${alpha * 0.07})`);
+    g2.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.beginPath(); ctx.arc(cx, markCY, r2, 0, Math.PI*2);
+    ctx.fillStyle = g2; ctx.fill();
+
+    // Horizontal light streak
+    const streakA = alpha * 0.12 * pulse;
+    const sg = ctx.createLinearGradient(0, markCY, W, markCY);
+    sg.addColorStop(0,   'rgba(240,230,210,0)');
+    sg.addColorStop(0.3, `rgba(240,230,210,${streakA})`);
+    sg.addColorStop(0.5, `rgba(245,235,215,${streakA * 1.4})`);
+    sg.addColorStop(0.7, `rgba(240,230,210,${streakA})`);
+    sg.addColorStop(1,   'rgba(240,230,210,0)');
+    ctx.fillStyle = sg;
+    ctx.fillRect(0, markCY - H*0.004, W, H*0.008);
+  }
+
+  /* ────────────────────────────────────
+   *  TEXT HELPERS
+   * ────────────────────────────────────*/
+  function hideAll() {
+    Object.values(txts).forEach(el => el.classList.remove('visible'));
+  }
+  function showOnly(id) {
+    hideAll();
+    if (id) txts[id].classList.add('visible');
+  }
+
+  /* ════════════════════════════════════════
+   *  MAIN ANIMATION LOOP
+   * ════════════════════════════════════════ */
+  function animate(ts) {
+    if (!startTime) startTime = ts;
+    const elapsed = ts - startTime;
+    timerFill.style.width = (Math.min(1, elapsed / DURATION) * 100) + '%';
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+
+    const markCY = cy - H * 0.06;
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S1  0–2222ms  "Marketing has evolved."
+     * Particles scatter and drift into loose order.
+     * Feels like the messy landscape starting to cohere.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    if (elapsed < T(3000)) {
+      const p     = elapsed / T(3000);
+      const order = easeInOut(clamp(p * 1.3, 0, 1));
+      showOnly('t1');
+      drawGlow(W * 0.55, 150, 145, 195, p * 0.05);
+      drawParticles(order, Math.min(1, p * 2));
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S2  2222–4444ms  "The question is — has your thinking?"
+     * Particles hold their positions. Everything pauses.
+     * A cursor blinks. The question hangs in the air.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(6000)) {
+      const p = (elapsed - T(3000)) / T(3000);
+      showOnly('t2');
+
+      drawGlow(W * 0.5, 150, 145, 195, lerp(0.05, 0.03, p));
+      // Particles held at their ordered positions, slowly fading
+      drawParticles(1, lerp(1, 0.35, easeInOut(p)));
+      drawCursor(elapsed, easeInOut(clamp(p * 1.5, 0, 1)));
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S3  4444–8667ms  "At Piquant Ideas…ideas that move people."
+     * Particles dissolve. Brand mark assembles itself
+     * line by line from centre outward. Brand name fades in below.
+     * Orbit dots begin circling.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(11700)) {
+      const p        = (elapsed - T(6000)) / T(5700);
+      const markProg = easeInOut(clamp(p * 1.1, 0, 1));
+      const orbitA   = easeInOut(clamp((p - 0.3) / 0.7, 0, 1));
+      showOnly('t3');
+
+      // Show brand name lockup
+      if (!brandShown && p > 0.45) {
+        brandShown = true;
+        brandLockup.classList.add('visible');
+      }
+
+      drawGlow(W * 0.5, 175, 168, 220, lerp(0.03, 0.09, p));
+      // Residual particles fade out
+      drawParticles(1, lerp(0.35, 0, clamp(p * 2.5, 0, 1)));
+      drawMark(markProg, orbitA);
+      drawOrbit(elapsed, orbitA * 0.7, markCY);
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S4  8667–12000ms  "Built for where marketing is going…"
+     * Mark fully assembled, glowing warmly.
+     * Past/future timeline lines: PAST dims, FUTURE draws forward.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(16200)) {
+      const p          = (elapsed - T(11700)) / T(4500);
+      const forwardPct = easeOut(clamp(p * 1.2, 0, 1));
+      showOnly('t4');
+
+      drawGlow(W * 0.48, 180, 172, 225, lerp(0.09, 0.07, p));
+      drawMark(1, lerp(0.7, 0.5, p));
+      drawOrbit(elapsed, lerp(0.7, 0.35, p), markCY);
+      drawTimeline(elapsed, easeInOut(clamp(p * 1.5, 0, 1)), forwardPct);
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S5  12000–14963ms  "If you're ready to think differently —"
+     * Timeline fades. Brand mark glows warmly, expectantly.
+     * A pulse. Waiting.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else if (elapsed < T(20200)) {
+      const p = (elapsed - T(16200)) / T(4000);
+      showOnly('t6');
+
+      drawMark(1, lerp(0.5, 0.8, easeInOut(p)));
+      drawBrandGlow(elapsed, easeInOut(p), markCY);
+      drawOrbit(elapsed, lerp(0.35, 0.55, p), markCY);
+      // Timeline fades out
+      drawTimeline(elapsed, lerp(1, 0, clamp(p * 2, 0, 1)), 1);
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     * S6  14963–20000ms  "We're ready to build that with you."
+     * Brand mark at full luminosity. Warm corona expands.
+     * A light streak across the horizontal. Resolution.
+     * ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    } else {
+      const p         = clamp((elapsed - T(20200)) / T(6800), 0, 1);
+      const glowAlpha = easeInOut(clamp(p * 1.4, 0, 1));
+      showOnly('t7');
+
+      drawFinalGlow(elapsed, glowAlpha, markCY);
+      drawMark(1, lerp(0.8, 1.0, easeInOut(p)));
+      drawOrbit(elapsed, lerp(0.55, 0.75, p), markCY);
+    }
+
+    if (elapsed < DURATION) {
+      animId = requestAnimationFrame(animate);
+    } else {
+      showOnly('t7');
+      timerFill.style.width = '100%';
+      setTimeout(() => { playBtn.style.display = 'flex'; playing = false; }, 800);
+    }
+  }
+
+  /* ── Start / replay ── */
+  function startAnim() {
+    if (playing) return;
+    playing = true; startTime = null;
+    timerFill.style.width = '0%';
+    hideAll();
+    brandLockup.classList.remove('visible');
+    cancelAnimationFrame(animId);
+    resize();      // ✅ always before initScene
+    initScene();
+    animId = requestAnimationFrame(animate);
+  }
+
+  ['click', 'touchstart'].forEach(evt =>
+    playBtn.addEventListener(evt, e => {
+      e.preventDefault();
+      playBtn.style.display = 'none';
+      startAnim();
+    }, { passive: false })
+  );
+</script>
+</body>
+</html>
